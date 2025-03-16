@@ -158,6 +158,21 @@ const TrendingSection = ({
     }
   };
 
+  const handleAddToBag = (id: string) => {
+    console.log(`Added product ${id} to bag`);
+    // Here you would add the product to the cart/bag state
+  };
+
+  const handleQuickView = (id: string) => {
+    console.log(`Quick view for product ${id}`);
+    // Here you would handle the quick view logic
+  };
+
+  const handleFavoriteToggle = (id: string, isFavorite: boolean) => {
+    console.log(`Product ${id} favorite status: ${isFavorite}`);
+    // Here you would update the favorite status in your state/database
+  };
+
   return (
     <section className="w-full py-16 px-4 md:px-8 bg-gray-50">
       <div className="max-w-7xl mx-auto">
@@ -265,6 +280,9 @@ const TrendingSection = ({
                         sustainabilityScore={product.sustainabilityScore}
                         isNew={product.isNew}
                         isFavorite={product.isFavorite}
+                        onAddToBag={handleAddToBag}
+                        onQuickView={handleQuickView}
+                        onFavoriteToggle={handleFavoriteToggle}
                       />
                     </motion.div>
                   ))}

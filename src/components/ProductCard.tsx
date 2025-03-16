@@ -5,13 +5,17 @@ import Image from "next/image";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Heart, ShoppingBag, Eye, Leaf } from "lucide-react";
+import { Heart, ShoppingBag, Eye, Leaf, Smartphone } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import SustainabilityIndicator from "./SustainabilityIndicator";
+import ARButton from "@/components/ui/ARButton";
+import ProductView3D from "@/components/ui/ProductView3D";
+import { trackProductView, trackAddToCart } from "@/lib/analytics";
 
 interface ProductCardProps {
   id?: string;
@@ -22,9 +26,12 @@ interface ProductCardProps {
   sustainabilityScore?: number;
   isNew?: boolean;
   isFavorite?: boolean;
+  onAddToBag?: (id: string) => void;
+  onQuickView?: (id: string) => void;
+  onFavoriteToggle?: (id: string, isFavorite: boolean) => void;
 }
 
-// Create a local sustainability indicator since we can't import the component
+// Create a local sustainability indicator for the product card
 const LocalSustainabilityIndicator = ({ score = 3 }: { score?: number }) => {
   const maxScore = 5;
   const tooltipText = `Sustainability Score: ${score}/${maxScore}`;
@@ -63,12 +70,38 @@ const ProductCard = ({
   sustainabilityScore = 4,
   isNew = true,
   isFavorite = false,
+  onAddToBag = () => {},
+  onQuickView = () => {},
+  onFavoriteToggle = () => {},
 }: ProductCardProps) => {
   const [favorite, setFavorite] = useState(isFavorite);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const newState = !favorite;
+    setFavorite(newState);
+    onFavoriteToggle(id, newState);
+  };
+
+  const handleAddToBag = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onAddToBag(id);
+    trackAddToCart(id, name, price);
+  };
+
+  const handleQuickViewClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onQuickView(id);
+    setIsDialogOpen(true);
+    trackProductView(id, name, price);
+  };
 
   return (
-    <Card className="w-80 h-120 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white">
+    <Card className="w-80 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white">
       <div className="relative h-96 w-full overflow-hidden group">
         <Image
           src={image}
@@ -87,7 +120,7 @@ const ProductCard = ({
             variant="outline"
             size="icon"
             className="rounded-full bg-white/80 backdrop-blur-sm hover:bg-white"
-            onClick={() => setFavorite(!favorite)}
+            onClick={handleFavoriteClick}
           >
             <Heart
               className={`h-5 w-5 ${favorite ? "fill-red-500 text-red-500" : "text-gray-600"}`}
@@ -95,11 +128,12 @@ const ProductCard = ({
           </Button>
         </div>
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
                 className="mr-2 bg-white/90 hover:bg-white"
+                onClick={handleQuickViewClick}
               >
                 <Eye className="h-4 w-4 mr-2" />
                 Quick View
@@ -123,21 +157,47 @@ const ProductCard = ({
                       ${price.toLocaleString()}
                     </p>
                     <div className="flex items-center mb-4">
-                      <LocalSustainabilityIndicator
-                        score={sustainabilityScore}
+                      <SustainabilityIndicator
+                        level={
+                          sustainabilityScore >= 4
+                            ? "high"
+                            : sustainabilityScore >= 3
+                              ? "medium"
+                              : "low"
+                        }
+                        size="md"
                       />
                     </div>
                     <p className="text-gray-600 mb-6">{description}</p>
                   </div>
+                  <div className="mb-6">
+                    <ProductView3D productId={id} className="mb-4" />
+                  </div>
                   <div className="flex gap-3">
-                    <Button className="flex-1">
+                    <Button
+                      className="flex-1"
+                      onClick={() => {
+                        onAddToBag(id);
+                        trackAddToCart(id, name, price);
+                      }}
+                    >
                       <ShoppingBag className="h-4 w-4 mr-2" />
                       Add to Bag
                     </Button>
+                    <ARButton
+                      productId={id}
+                      productName={name}
+                      variant="outline"
+                      size="icon"
+                    />
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setFavorite(!favorite)}
+                      onClick={() => {
+                        const newState = !favorite;
+                        setFavorite(newState);
+                        onFavoriteToggle(id, newState);
+                      }}
                     >
                       <Heart
                         className={`h-5 w-5 ${favorite ? "fill-red-500 text-red-500" : "text-gray-600"}`}
@@ -159,7 +219,12 @@ const ProductCard = ({
       </CardContent>
       <CardFooter className="flex justify-between items-center pt-0">
         <p className="font-semibold">${price.toLocaleString()}</p>
-        <Button size="sm" variant="outline" className="rounded-full">
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full"
+          onClick={handleAddToBag}
+        >
           <ShoppingBag className="h-4 w-4 mr-2" />
           Add to Bag
         </Button>
