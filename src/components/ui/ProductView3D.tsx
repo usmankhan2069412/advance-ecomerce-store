@@ -5,19 +5,38 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 interface ProductView3DProps {
-  modelPath: string;
+  productId?: string;
   className?: string;
+  modelPath?: string;
 }
 
-export function ProductView3D({ modelPath, className }: ProductView3DProps) {
+export function ProductView3D({
+  productId = "",
+  className = "",
+  modelPath,
+}: ProductView3DProps) {
+  // Use ref for model path to prevent re-renders
+  const actualModelPathRef = useRef(
+    modelPath || `https://example.com/models/${productId}.glb`,
+  );
+
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     if (!containerRef.current) return;
+
+    // Prevent multiple effect runs from causing infinite loops
+    if (rendererRef.current) {
+      return () => {
+        isMounted = false;
+      };
+    }
 
     // Initialize scene
     const scene = new THREE.Scene();
@@ -42,7 +61,9 @@ export function ProductView3D({ modelPath, className }: ProductView3DProps) {
       containerRef.current.clientHeight,
     );
     renderer.setPixelRatio(window.devicePixelRatio);
-    containerRef.current.appendChild(renderer.domElement);
+    if (containerRef.current) {
+      containerRef.current.appendChild(renderer.domElement);
+    }
 
     // Add controls
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -66,18 +87,24 @@ export function ProductView3D({ modelPath, className }: ProductView3DProps) {
 
     // Animation loop
     const animate = () => {
-      requestAnimationFrame(animate);
+      if (!isMounted) return;
+      animationFrameRef.current = requestAnimationFrame(animate);
       cube.rotation.x += 0.01;
       cube.rotation.y += 0.01;
-      controls.update();
-      renderer.render(scene, camera);
+      if (controls) controls.update();
+      if (renderer && scene && camera) renderer.render(scene, camera);
     };
 
     animate();
 
     // Handle resize
     const handleResize = () => {
-      if (!containerRef.current || !cameraRef.current || !rendererRef.current)
+      if (
+        !containerRef.current ||
+        !cameraRef.current ||
+        !rendererRef.current ||
+        !isMounted
+      )
         return;
 
       cameraRef.current.aspect =
@@ -93,9 +120,18 @@ export function ProductView3D({ modelPath, className }: ProductView3DProps) {
 
     // Cleanup
     return () => {
+      isMounted = false;
       window.removeEventListener("resize", handleResize);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
       if (containerRef.current && rendererRef.current) {
-        containerRef.current.removeChild(rendererRef.current.domElement);
+        try {
+          containerRef.current.removeChild(rendererRef.current.domElement);
+        } catch (e) {
+          // Element might have been removed already
+        }
       }
     };
   }, []);

@@ -1,8 +1,14 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
-// Initialize a basic Three.js scene
+// Initialize a basic Three.js scene with performance optimizations
 export const initThreeJsScene = (container: HTMLElement) => {
+  // Check if WebGL is supported
+  if (!THREE.WebGLRenderer.isWebGLAvailable()) {
+    const warning = THREE.WebGLRenderer.getWebGLErrorMessage();
+    container.appendChild(warning);
+    return { scene: null, camera: null, renderer: null };
+  }
   // Create scene
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xf8f8f8);
@@ -16,9 +22,15 @@ export const initThreeJsScene = (container: HTMLElement) => {
   );
   camera.position.z = 5;
 
-  // Create renderer
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  // Create renderer with optimizations
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    powerPreference: "high-performance",
+    precision: "mediump", // Good balance between quality and performance
+    alpha: false, // Improves performance when background is opaque
+  });
   renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
   container.appendChild(renderer.domElement);
 
   // Add controls

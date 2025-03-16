@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Heart, ShoppingBag, Eye, Leaf, Smartphone } from "lucide-react";
+import { Heart, ShoppingBag, Eye, Leaf } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -13,8 +13,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import SustainabilityIndicator from "./SustainabilityIndicator";
-import ARButton from "@/components/ui/ARButton";
-import ProductView3D from "@/components/ui/ProductView3D";
+import { ARButton } from "@/components/ui/ARButton";
+import { ProductView3D } from "@/components/ui/ProductView3D";
 import { trackProductView, trackAddToCart } from "@/lib/analytics";
 
 interface ProductCardProps {
@@ -77,12 +77,23 @@ const ProductCard = ({
   const [favorite, setFavorite] = useState(isFavorite);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  // Use ref for sustainability level to prevent re-renders
+  const sustainabilityLevelRef = useRef(
+    sustainabilityScore >= 4
+      ? "high"
+      : sustainabilityScore >= 3
+        ? "medium"
+        : "low",
+  );
+
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const newState = !favorite;
-    setFavorite(newState);
-    onFavoriteToggle(id, newState);
+    setFavorite((prevState) => {
+      const newState = !prevState;
+      onFavoriteToggle(id, newState);
+      return newState;
+    });
   };
 
   const handleAddToBag = (e: React.MouseEvent) => {
@@ -133,7 +144,12 @@ const ProductCard = ({
               <Button
                 variant="outline"
                 className="mr-2 bg-white/90 hover:bg-white"
-                onClick={handleQuickViewClick}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onQuickView(id);
+                  trackProductView(id, name, price);
+                }}
               >
                 <Eye className="h-4 w-4 mr-2" />
                 Quick View
@@ -158,13 +174,7 @@ const ProductCard = ({
                     </p>
                     <div className="flex items-center mb-4">
                       <SustainabilityIndicator
-                        level={
-                          sustainabilityScore >= 4
-                            ? "high"
-                            : sustainabilityScore >= 3
-                              ? "medium"
-                              : "low"
-                        }
+                        level={sustainabilityLevelRef.current}
                         size="md"
                       />
                     </div>
@@ -194,9 +204,11 @@ const ProductCard = ({
                       variant="outline"
                       size="icon"
                       onClick={() => {
-                        const newState = !favorite;
-                        setFavorite(newState);
-                        onFavoriteToggle(id, newState);
+                        setFavorite((prevState) => {
+                          const newState = !prevState;
+                          onFavoriteToggle(id, newState);
+                          return newState;
+                        });
                       }}
                     >
                       <Heart

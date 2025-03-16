@@ -123,20 +123,25 @@ const TrendingSection = ({
   ];
 
   useEffect(() => {
-    let filtered = products;
+    // Use a function to avoid recreating the filtered array on each render
+    const getFilteredProducts = () => {
+      let filtered = [...products];
 
-    // Filter by category
-    if (activeTab !== "all") {
-      filtered = filtered.filter((product) => product.category === activeTab);
-    }
+      // Filter by category
+      if (activeTab !== "all") {
+        filtered = filtered.filter((product) => product.category === activeTab);
+      }
 
-    // Filter by price range
-    filtered = filtered.filter(
-      (product) =>
-        product.price >= priceRange[0] && product.price <= priceRange[1],
-    );
+      // Filter by price range
+      filtered = filtered.filter(
+        (product) =>
+          product.price >= priceRange[0] && product.price <= priceRange[1],
+      );
 
-    setFilteredProducts(filtered);
+      return filtered;
+    };
+
+    setFilteredProducts(getFilteredProducts());
     setCurrentPage(0); // Reset to first page when filters change
   }, [activeTab, priceRange, products]);
 

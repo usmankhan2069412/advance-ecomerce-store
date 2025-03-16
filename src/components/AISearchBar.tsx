@@ -78,6 +78,18 @@ const AISearchBar = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Debounce search to improve performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (query.trim()) {
+        // This would be an API call in a real implementation
+        console.log("Searching for:", query);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
   const handleSearch = () => {
     if (query.trim()) {
       onSearch(query);

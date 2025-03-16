@@ -85,6 +85,8 @@ const HeroSection = ({
           loop
           playsInline
           onLoadedData={() => setIsVideoLoaded(true)}
+          preload="auto"
+          poster="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=1200&q=80"
         >
           <source src={videoUrl} type="video/mp4" />
           Your browser does not support the video tag.
