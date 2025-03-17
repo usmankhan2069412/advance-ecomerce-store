@@ -41,7 +41,7 @@ export default function ArtistManagement() {
               </TabsList>
 
               <TabsContent value="dashboard">
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">
@@ -209,7 +209,7 @@ export default function ArtistManagement() {
                         <h3 className="text-lg font-medium mb-4">
                           Scan Settings
                         </h3>
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <div>
                             <label className="text-sm font-medium">
                               Similarity Threshold
@@ -319,7 +319,7 @@ export default function ArtistManagement() {
                         },
                       ].map((scan, i) => (
                         <div key={i} className="p-4 border rounded-md">
-                          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <div className="flex items-center">
                                 <h3 className="font-medium">{scan.id}</h3>
@@ -338,7 +338,7 @@ export default function ArtistManagement() {
                                 {scan.collection} by {scan.artist}
                               </p>
                             </div>
-                            <div className="flex items-center mt-2 md:mt-0">
+                            <div className="flex items-center mt-2 sm:mt-0">
                               <div className="flex items-center mr-4">
                                 <Image className="h-4 w-4 mr-1 text-muted-foreground" />
                                 <span className="text-sm">
@@ -382,7 +382,7 @@ export default function ArtistManagement() {
               </TabsList>
 
               <TabsContent value="trends">
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">
@@ -493,7 +493,7 @@ export default function ArtistManagement() {
               </TabsContent>
 
               <TabsContent value="social">
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   <Card className="md:col-span-2">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">
@@ -637,7 +637,7 @@ export default function ArtistManagement() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                         <div className="p-4 border rounded-md">
                           <h3 className="font-medium">Biomimetic Collection</h3>
                           <p className="text-sm text-muted-foreground mt-1">
