@@ -15,6 +15,13 @@ import {
   Menu,
   X,
   ChevronRight,
+  Home,
+  Package,
+  ShoppingCart,
+  Tag,
+  ChevronDown,
+  ChevronUp,
+  Cog
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -23,217 +30,208 @@ interface AdminLayoutProps {
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
+    products: false,
+    users: false,
+    orders: false,
+  });
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+  const toggleMenu = (menu: string) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menu]: !prev[menu]
+    }));
+  };
+
+  const isActive = (path: string) => {
+    return pathname === path;
   };
 
   const navItems = [
     {
       name: "Dashboard",
-      href: "/admin",
-      icon: <BarChart3 className="h-5 w-5" />,
+      icon: <Home className="w-5 h-5" />,
+      path: "/admin",
     },
     {
       name: "Products",
-      href: "/admin/products",
-      icon: <ShoppingBag className="h-5 w-5" />,
+      icon: <Package className="w-5 h-5" />,
+      dropdown: true,
+      key: "products",
+      children: [
+        { name: "All Products", path: "/admin/products" },
+        { name: "Add Product", path: "/admin/products/add" },
+        { name: "Categories", path: "/admin/categories" },
+        { name: "Attributes", path: "/admin/attributes" },
+      ],
     },
     {
-      name: "Inventory",
-      href: "/admin/products/inventory",
-      icon: <ShoppingBag className="h-5 w-5" />,
-    },
-    {
-      name: "Categories",
-      href: "/admin/products/categories",
-      icon: <ShoppingBag className="h-5 w-5" />,
-    },
-    {
-      name: "AI Analytics",
-      href: "/admin/analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
-    },
-    {
-      name: "Artist Management",
-      href: "/admin/artists",
-      icon: <Palette className="h-5 w-5" />,
-    },
-    {
-      name: "Artist Designs",
-      href: "/admin/artists/designs",
-      icon: <Palette className="h-5 w-5" />,
-    },
-    {
-      name: "Artist Payouts",
-      href: "/admin/artists/payouts",
-      icon: <Palette className="h-5 w-5" />,
+      name: "Users",
+      icon: <Users className="w-5 h-5" />,
+      dropdown: true,
+      key: "users",
+      children: [
+        { name: "All Users", path: "/admin/users" },
+        { name: "Add User", path: "/admin/users/add" },
+        { name: "Roles", path: "/admin/roles" },
+      ],
     },
     {
       name: "Orders",
-      href: "/admin/orders",
-      icon: <ShoppingBag className="h-5 w-5" />,
+      icon: <ShoppingCart className="w-5 h-5" />,
+      dropdown: true,
+      key: "orders",
+      children: [
+        { name: "All Orders", path: "/admin/orders" },
+        { name: "Pending", path: "/admin/orders/pending" },
+        { name: "Completed", path: "/admin/orders/completed" },
+      ],
     },
     {
-      name: "Customers",
-      href: "/admin/customers",
-      icon: <Users className="h-5 w-5" />,
+      name: "Marketing",
+      icon: <Tag className="w-5 h-5" />,
+      path: "/admin/marketing",
     },
     {
-      name: "Promotions",
-      href: "/admin/cms/promotions",
-      icon: <ShoppingBag className="h-5 w-5" />,
-    },
-    {
-      name: "Discount Codes",
-      href: "/admin/promotions/discounts",
-      icon: <ShoppingBag className="h-5 w-5" />,
-    },
-    {
-      name: "Security & Compliance",
-      href: "/admin/security",
-      icon: <Shield className="h-5 w-5" />,
-    },
-    {
-      name: "User Roles",
-      href: "/admin/security/roles",
-      icon: <Shield className="h-5 w-5" />,
-    },
-    {
-      name: "Audit Logs",
-      href: "/admin/security/audit",
-      icon: <Shield className="h-5 w-5" />,
+      name: "Analytics",
+      icon: <BarChart3 className="w-5 h-5" />,
+      path: "/admin/analytics",
     },
     {
       name: "Settings",
-      href: "/admin/settings",
-      icon: <Settings className="h-5 w-5" />,
+      icon: <Settings className="w-5 h-5" />,
+      path: "/admin/settings",
     },
   ];
 
-  // Handle keydown for the overlay
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      toggleSidebar();
-    }
-  };
-
   return (
-    <div className="flex h-screen bg-gray-100 relative">
-      {/* Sidebar */}
-      <div
-        className={cn(
-          "bg-black text-white fixed md:relative z-20 h-full transition-all duration-300 ease-in-out",
-          sidebarOpen ? "w-64" : "w-0 md:w-16 overflow-hidden",
-        )}
-      >
-        <div
-          className={cn(
-            "p-6 flex items-center justify-between",
-            !sidebarOpen && "md:justify-center md:p-4",
-          )}
-        >
-          {sidebarOpen ? (
-            <h1 className="text-2xl font-bold tracking-tighter">AETHERIA</h1>
-          ) : (
-            <h1 className="text-2xl font-bold tracking-tighter hidden md:block">
-              A
-            </h1>
-          )}
+    <div className="flex h-screen bg-gray-100">
+      <div className="fixed top-0 left-0 z-40 w-full bg-white shadow-sm md:hidden">
+        <div className="flex items-center justify-between p-4">
+          <h1 className="text-xl font-bold">Admin Panel</h1>
           <button
-            type="button"
-            onClick={toggleSidebar}
-            className="text-white md:hidden"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 text-gray-600 rounded-md hover:bg-gray-100"
           >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-        <nav className="mt-6">
-          <ul>
-            {navItems.map((item) => (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "flex items-center py-3 text-sm hover:bg-gray-800 transition-colors",
-                    sidebarOpen ? "px-6" : "px-0 md:px-5 justify-center",
-                    pathname === item.href &&
-                      "bg-gray-800 border-l-4 border-white",
-                  )}
-                  title={!sidebarOpen ? item.name : undefined}
-                >
-                  <span className={sidebarOpen ? "mr-3" : ""}>{item.icon}</span>
-                  {sidebarOpen && <span>{item.name}</span>}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div
-          className={cn(
-            "absolute bottom-0 border-t border-gray-800 w-full",
-            sidebarOpen ? "w-64" : "w-0 md:w-16",
-          )}
-        >
-          <button
-            type="button"
-            className={cn(
-              "flex items-center py-4 text-sm w-full hover:bg-gray-800 transition-colors",
-              sidebarOpen ? "px-6" : "px-0 md:px-5 justify-center",
-            )}
-          >
-            <LogOut className={cn("h-5 w-5", sidebarOpen && "mr-3")} />
-            {sidebarOpen && <span>Sign Out</span>}
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {isMobileMenuOpen ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              )}
+            </svg>
           </button>
         </div>
       </div>
 
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
-          onClick={toggleSidebar}
-          role="button"
-          tabIndex={0}
-          aria-label="Close sidebar"
-          onKeyDown={handleKeyDown}
-        />
-      )}
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto w-full">
-        <header className="bg-white shadow-sm sticky top-0 z-10">
-          <div className="px-6 py-4 flex justify-between items-center">
-            <div className="flex items-center">
-              <button
-                type="button"
-                onClick={toggleSidebar}
-                className="mr-4 md:hidden"
-                aria-label="Toggle sidebar"
-              >
-                <Menu className="h-6 w-6" />
-              </button>
-              <button
-                type="button"
-                onClick={toggleSidebar}
-                className="mr-4 hidden md:block"
-                aria-label="Toggle sidebar"
-              >
-                {sidebarOpen ? (
-                  <ChevronRight className="h-6 w-6" />
-                ) : (
-                  <Menu className="h-6 w-6" />
-                )}
-              </button>
-              <h2 className="text-xl font-semibold text-gray-800">
-                {navItems.find((item) => item.href === pathname)?.name ||
-                  "Dashboard"}
-              </h2>
-            </div>
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-md transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:relative md:w-64 md:flex-shrink-0`}
+      >
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-center h-16 px-4 border-b">
+            <h1 className="text-xl font-bold">Admin Panel</h1>
           </div>
-        </header>
-        <main className="p-4 md:p-6">{children}</main>
+          
+          <nav className="flex-1 px-2 py-4 overflow-y-auto">
+            <ul className="space-y-1">
+              {navItems.map((item, index) => (
+                <li key={index}>
+                  {item.dropdown ? (
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => toggleMenu(item.key)}
+                        className={`flex items-center justify-between w-full px-4 py-2 text-left text-gray-700 rounded-md hover:bg-gray-100 hover:text-gray-900 ${
+                          expandedMenus[item.key] ? 'bg-gray-100' : ''
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          {item.icon}
+                          <span className="ml-3">{item.name}</span>
+                        </div>
+                        {expandedMenus[item.key] ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </button>
+                      
+                      {expandedMenus[item.key] && (
+                        <ul className="pl-10 space-y-1">
+                          {item.children.map((child, childIndex) => (
+                            <li key={childIndex}>
+                              <Link href={child.path}>
+                                <span
+                                  className={`block px-4 py-2 text-sm rounded-md ${
+                                    isActive(child.path)
+                                      ? 'bg-blue-500 text-white'
+                                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                  }`}
+                                >
+                                  {child.name}
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ) : (
+                    <Link href={item.path}>
+                      <span
+                        className={`flex items-center px-4 py-2 rounded-md ${
+                          isActive(item.path)
+                            ? 'bg-blue-500 text-white'
+                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                        }`}
+                      >
+                        {item.icon}
+                        <span className="ml-3">{item.name}</span>
+                      </span>
+                    </Link>
+                  )}
+                </li>
+              ))}
+              
+              <li className="mt-6">
+                <button
+                  className="flex items-center w-full px-4 py-2 text-gray-700 rounded-md hover:bg-gray-100 hover:text-gray-900"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="ml-3">Logout</span>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </aside>
+
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="h-16 md:hidden"></div>
+        
+        <main className="flex-1 p-4 overflow-y-auto">
+          <div className="container mx-auto">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );
