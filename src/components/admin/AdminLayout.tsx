@@ -21,7 +21,13 @@ import {
   Tag,
   ChevronDown,
   ChevronUp,
-  Cog
+  Cog,
+  Cpu,
+  Brain,
+  Globe,
+  Lock,
+  FileText,
+  Zap
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -97,6 +103,36 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       name: "Analytics",
       icon: <BarChart3 className="w-5 h-5" />,
       path: "/admin/analytics",
+    },
+    {
+      name: "AI Features",
+      icon: <Brain className="w-5 h-5" />,
+      path: "/admin/ai-features",
+    },
+    {
+      name: "AI Documentation",
+      icon: <FileText className="w-5 h-5" />,
+      path: "/admin/ai-documentation",
+    },
+    {
+      name: "Feature Enhancements",
+      icon: <Zap className="w-5 h-5" />,
+      path: "/admin/feature-enhancements",
+    },
+    {
+      name: "Future Roadmap",
+      icon: <Globe className="w-5 h-5" />,
+      path: "/admin/future-enhancements",
+    },
+    {
+      name: "Security & Compliance",
+      icon: <Lock className="w-5 h-5" />,
+      path: "/admin/security-compliance",
+    },
+    {
+      name: "Technical Stack",
+      icon: <Cpu className="w-5 h-5" />,
+      path: "/admin/technical-stack",
     },
     {
       name: "Settings",

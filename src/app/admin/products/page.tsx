@@ -1,14 +1,27 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Filter, Upload, Archive, Tag } from "lucide-react";
+import Link from "next/link";
+import { Plus, Search, Filter, Upload, Archive, Tag, Edit, Trash } from "lucide-react";
 
+/**
+ * Products Management Page
+ * Displays and manages the product catalog
+ */
 export default function ProductsManagement() {
+  const [products, setProducts] = useState<any[]>([]);
+  
+  // Load products from localStorage on component mount
+  useEffect(() => {
+    const storedProducts = JSON.parse(localStorage.getItem('products') || '[]');
+    setProducts(storedProducts);
+  }, []);
+  
   return (
     <AdminLayout>
       <div className="grid gap-6">
@@ -23,9 +36,11 @@ export default function ProductsManagement() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Product
+            <Button asChild className="flex items-center gap-2">
+              <Link href="/admin/products/new">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Link>
             </Button>
             <Button variant="outline" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
@@ -64,23 +79,13 @@ export default function ProductsManagement() {
                   Categories
                 </Button>
               </div>
-              <div className="flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <Archive className="h-4 w-4" />
-                  View Archived
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Product Management Tabs */}
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid grid-cols-4 w-full max-w-md mb-4">
+        {/* Product tabs and table */}
+        <Tabs defaultValue="all">
+          <TabsList>
             <TabsTrigger value="all">All Products</TabsTrigger>
             <TabsTrigger value="active">Active</TabsTrigger>
             <TabsTrigger value="draft">Draft</TabsTrigger>
@@ -89,155 +94,82 @@ export default function ProductsManagement() {
 
           <TabsContent value="all" className="space-y-4">
             <Card>
-              <CardHeader className="py-4">
-                <div className="flex justify-between items-center">
-                  <CardTitle>All Products</CardTitle>
-                  <div className="text-sm text-muted-foreground">
-                    Showing 1-10 of 143 products
-                  </div>
-                </div>
-              </CardHeader>
               <CardContent className="p-0">
-                <div className="border rounded-md">
+                <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="p-2 text-left font-medium text-xs w-10">
-                          <Checkbox id="select-all" />
-                        </th>
-                        <th className="p-2 text-left font-medium text-xs">
+                      <tr className="border-b">
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                           Product
                         </th>
-                        <th className="p-2 text-left font-medium text-xs hidden md:table-cell">
-                          SKU
-                        </th>
-                        <th className="p-2 text-left font-medium text-xs hidden md:table-cell">
-                          Category
-                        </th>
-                        <th className="p-2 text-left font-medium text-xs">
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                           Price
                         </th>
-                        <th className="p-2 text-left font-medium text-xs hidden md:table-cell">
-                          Stock
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                          Inventory
                         </th>
-                        <th className="p-2 text-left font-medium text-xs">
-                          Status
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                          Category
                         </th>
-                        <th className="p-2 text-left font-medium text-xs">
+                        <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
                           Actions
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {[
-                        {
-                          id: 1,
-                          name: "Neural Couture Dress",
-                          sku: "NC-001",
-                          category: "Dresses",
-                          price: "$1,299.99",
-                          stock: 24,
-                          status: "Active",
-                        },
-                        {
-                          id: 2,
-                          name: "Ethereal Silk Gown",
-                          sku: "ESG-002",
-                          category: "Gowns",
-                          price: "$2,499.99",
-                          stock: 8,
-                          status: "Active",
-                        },
-                        {
-                          id: 3,
-                          name: "Quantum Leather Jacket",
-                          sku: "QLJ-003",
-                          category: "Outerwear",
-                          price: "$899.99",
-                          stock: 0,
-                          status: "Out of Stock",
-                        },
-                        {
-                          id: 4,
-                          name: "Digital Weave Scarf",
-                          sku: "DWS-004",
-                          category: "Accessories",
-                          price: "$349.99",
-                          stock: 42,
-                          status: "Active",
-                        },
-                        {
-                          id: 5,
-                          name: "Holographic Heels",
-                          sku: "HH-005",
-                          category: "Footwear",
-                          price: "$799.99",
-                          stock: 16,
-                          status: "Active",
-                        },
-                      ].map((product) => (
-                        <tr
-                          key={product.id}
-                          className="border-b hover:bg-muted/50"
-                        >
-                          <td className="p-2">
-                            <Checkbox id={`select-${product.id}`} />
-                          </td>
-                          <td className="p-2 font-medium">{product.name}</td>
-                          <td className="p-2 text-muted-foreground hidden md:table-cell">
-                            {product.sku}
-                          </td>
-                          <td className="p-2 text-muted-foreground hidden md:table-cell">
-                            {product.category}
-                          </td>
-                          <td className="p-2">{product.price}</td>
-                          <td className="p-2 hidden md:table-cell">
-                            <span
-                              className={
-                                product.stock === 0
-                                  ? "text-red-500"
-                                  : product.stock < 10
-                                    ? "text-amber-500"
-                                    : "text-green-500"
-                              }
-                            >
-                              {product.stock}
-                            </span>
-                          </td>
-                          <td className="p-2">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${product.status === "Active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
-                            >
-                              {product.status}
-                            </span>
-                          </td>
-                          <td className="p-2">
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm">
-                                Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-500"
-                              >
-                                Delete
-                              </Button>
-                            </div>
+                      {products.length > 0 ? (
+                        products.map((product) => (
+                          <tr key={product.id} className="border-b">
+                            <td className="p-4 align-middle">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-md bg-gray-100"></div>
+                                <div>
+                                  <div className="font-medium">{product.name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    SKU: {product.sku}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4 align-middle">
+                              ${product.price.toFixed(2)}
+                            </td>
+                            <td className="p-4 align-middle">
+                              {product.inventory}
+                            </td>
+                            <td className="p-4 align-middle">
+                              {product.category}
+                            </td>
+                            <td className="p-4 align-middle text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button size="sm" variant="ghost">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost">
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                            No products found. Create your first product!
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
-                <div className="flex justify-between items-center mt-4">
+                <div className="flex justify-between items-center p-4">
                   <Button variant="outline" size="sm" disabled>
                     Previous
                   </Button>
                   <div className="text-sm text-muted-foreground">
-                    Page 1 of 15
+                    Page 1 of {Math.max(1, Math.ceil(products.length / 10))}
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" disabled={products.length <= 10}>
                     Next
                   </Button>
                 </div>
