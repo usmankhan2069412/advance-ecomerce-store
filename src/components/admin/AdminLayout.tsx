@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   BarChart3,
   Users,
@@ -34,14 +35,32 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
+/**
+ * Admin Layout Component
+ * Provides the layout structure for all admin pages with authentication
+ */
 const AdminLayout = ({ children }: AdminLayoutProps) => {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
     products: false,
     users: false,
     orders: false,
   });
+
+  // Check authentication and redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push("/admin/login");
+    }
+  }, [isAuthenticated, router]);
+
+  // If not authenticated, don't render the admin layout
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const toggleMenu = (menu: string) => {
     setExpandedMenus(prev => ({
@@ -52,6 +71,14 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   const isActive = (path: string) => {
     return pathname === path;
+  };
+
+  /**
+   * Handle logout action
+   */
+  const handleLogout = () => {
+    logout();
+    router.push("/admin/login");
   };
 
   const navItems = [
@@ -142,53 +169,28 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <div className="fixed top-0 left-0 z-40 w-full bg-white shadow-sm md:hidden">
-        <div className="flex items-center justify-between p-4">
-          <h1 className="text-xl font-bold">Admin Panel</h1>
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 text-gray-600 rounded-md hover:bg-gray-100"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {isMobileMenuOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <aside
-        className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-md transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
-          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:relative md:w-64 md:flex-shrink-0`}
+    <div className="flex h-screen overflow-hidden">
+      {/* Mobile menu button */}
+      <button
+        className="fixed top-4 left-4 z-50 rounded-md bg-white p-2 shadow-md md:hidden"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       >
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-center h-16 px-4 border-b">
-            <h1 className="text-xl font-bold">Admin Panel</h1>
+        {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+      </button>
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-white transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex h-16 items-center justify-center border-b px-4">
+            <h1 className="text-xl font-bold">Admin Dashboard</h1>
           </div>
-          
-          <nav className="flex-1 px-2 py-4 overflow-y-auto">
-            <ul className="space-y-1">
+
+          <nav className="flex-1 overflow-y-auto p-4">
+            <ul className="space-y-2">
               {navItems.map((item, index) => (
                 <li key={index}>
                   {item.dropdown ? (
@@ -249,6 +251,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
               
               <li className="mt-6">
                 <button
+                  onClick={handleLogout}
                   className="flex items-center w-full px-4 py-2 text-gray-700 rounded-md hover:bg-gray-100 hover:text-gray-900"
                 >
                   <LogOut className="w-5 h-5" />

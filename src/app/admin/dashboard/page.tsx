@@ -1,16 +1,15 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Users, ShoppingBag, DollarSign, TrendingUp } from "lucide-react";
 
 /**
- * Admin Home Page
+ * Admin Dashboard Page
  * Displays overview statistics and key metrics
  */
-export default function AdminHomePage() {
+export default function DashboardPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -106,4 +105,4 @@ export default function AdminHomePage() {
       </div>
     </AdminLayout>
   );
-}
+} 
