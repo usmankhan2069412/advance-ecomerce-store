@@ -1,8 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Cpu, Sparkles, Shirt, Palette, Users, ArrowRight } from "lucide-react";
 
 /**
@@ -64,14 +63,11 @@ export default function AIFeaturesPage() {
                     className="object-cover"
                   />
                 </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  as={Link}
-                  href="/virtual-try-on"
-                >
-                  Try It Now
-                </Button>
+                <Link href="/virtual-try-on">
+                  <a className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Try It Now
+                  </a>
+                </Link>
               </CardContent>
             </Card>
 
@@ -95,14 +91,11 @@ export default function AIFeaturesPage() {
                     className="object-cover"
                   />
                 </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  as={Link}
-                  href="/artist-designs"
-                >
-                  Explore Designs
-                </Button>
+                <Link href="/artist-designs">
+                  <a className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Explore Designs
+                  </a>
+                </Link>
               </CardContent>
             </Card>
 
@@ -126,14 +119,11 @@ export default function AIFeaturesPage() {
                     className="object-cover"
                   />
                 </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  as={Link}
-                  href="/ai-recommendations"
-                >
-                  View Recommendations
-                </Button>
+                <Link href="/ai-recommendations">
+                  <a className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    View Recommendations
+                  </a>
+                </Link>
               </CardContent>
             </Card>
           </div>
@@ -208,13 +198,12 @@ export default function AIFeaturesPage() {
                 </li>
               </ul>
               <div className="mt-8">
-                <Button 
-                  rightIcon={<ArrowRight className="h-4 w-4" />}
-                  as={Link}
-                  href="/technology"
-                >
-                  Learn More About Our Technology
-                </Button>
+                <Link href="/technology">
+                  <a className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Learn More About Our Technology
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </a>
+                </Link>
               </div>
             </div>
           </div>
@@ -232,23 +221,16 @@ export default function AIFeaturesPage() {
               Join thousands of customers who have transformed their shopping experience with our AI-powered platform.
             </p>
             <div className="flex flex-col justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-              <Button 
-                variant="secondary" 
-                size="lg"
-                as={Link}
-                href="/products"
-              >
-                Shop Now
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="border-white text-white hover:bg-white/10"
-                as={Link}
-                href="/register"
-              >
-                Create Account
-              </Button>
+              <Link href="/products">
+                <a className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                  Shop Now
+                </a>
+              </Link>
+              <Link href="/register">
+                <a className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 border-white text-white hover:bg-white/10">
+                  Create Account
+                </a>
+              </Link>
             </div>
           </div>
         </div>

@@ -101,7 +101,7 @@ export default function CustomersPage() {
                     <TableCell>
                       <Badge
                         variant={
-                          customer.status === "active" ? "success" : "secondary"
+                          customer.status === "active" ? "secondary" : "secondary" // Change "success" to "secondary"
                         }
                       >
                         {customer.status}

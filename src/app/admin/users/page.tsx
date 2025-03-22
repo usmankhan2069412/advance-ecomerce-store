@@ -181,7 +181,7 @@ export default function UsersManagement() {
                           </Badge>
                         </td>
                         <td className="p-4 align-middle">
-                          <Badge variant={user.status === "Active" ? "success" : "destructive"}>
+                          <Badge variant={user.status === "Active" ? "destructive" : "outline"}>
                             {user.status}
                           </Badge>
                         </td>

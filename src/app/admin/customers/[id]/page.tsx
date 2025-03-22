@@ -52,7 +52,7 @@ export default function CustomerDetailsPage({
             </Button>
             <h1 className="text-2xl font-bold">Customer Profile</h1>
             <Badge
-              variant={customer.status === "active" ? "success" : "secondary"}
+              variant={customer.status === "active" ? "destructive" : "default"} // Use "default" for inactive
             >
               {customer.status}
             </Badge>
@@ -199,12 +199,10 @@ export default function CustomerDetailsPage({
                               <Badge
                                 variant={
                                   order.status === "delivered"
-                                    ? "success"
+                                    ? "secondary" // Change "success" to "secondary" or another valid type
                                     : order.status === "shipped"
-                                      ? "default"
-                                      : order.status === "processing"
-                                        ? "secondary"
-                                        : "outline"
+                                      ? "destructive"
+                                      : "default" // Use "default" for other statuses
                                 }
                               >
                                 {order.status}
