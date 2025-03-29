@@ -38,24 +38,26 @@ const Hero = () => {
             </p>
             
             <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-              <Button 
-                size="lg" 
-                leftIcon={<ShoppingBag className="h-5 w-5" />}
-                as={Link}
-                href="/products"
-              >
-                Shop Now
-              </Button>
+              <Link href="/products">
+                <Button size="lg">
+                  <ShoppingBag className="mr-2 h-5 w-5" />
+                  Shop Now
+                </Button>
+              </Link>
               
-              <Button 
-                variant="outline" 
-                size="lg" 
-                rightIcon={<ArrowRight className="h-5 w-5" />}
-                as={Link}
-                href="/ai-features"
-              >
-                Explore AI Features
-              </Button>
+              <Link href="/ai-features">
+                <Button variant="secondary" size="lg">
+                  Explore AI Features
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              
+              {/* Ensure no link or button related to runway video exists */}
+              {/* <Link href="/runway-video.mp4">
+                <Button variant="outline" size="lg">
+                  Watch Runway Video
+                </Button>
+              </Link> */}
             </div>
             
             <div className="mt-10 flex items-center">
@@ -63,11 +65,15 @@ const Hero = () => {
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-white dark:border-gray-800">
                     <Image 
-                      src={`/avatars/avatar-${i}.jpg`} 
+                      src={`/images/avatars/avatar-${i}.jpg`} 
                       alt={`User ${i}`} 
                       width={40}
                       height={40}
                       className="object-cover"
+                      onError={(e) => {
+                        // Fix the incorrect path by removing the leading dots
+                        e.currentTarget.src = '/images/hero/beautiful-young-woman-wearing-professional-makeup.jpg';
+                      }}
                     />
                   </div>
                 ))}
@@ -92,11 +98,15 @@ const Hero = () => {
           <div className="z-10 order-1 lg:order-2">
             <div className="relative h-[400px] w-full overflow-hidden rounded-2xl shadow-2xl sm:h-[500px] md:h-[600px]">
               <Image
-                src="/hero-image.jpg"
+                src="/images/hero/hero-image.jpg"
                 alt="AI Fashion Platform"
                 fill
                 priority
                 className="object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = '/images/hero/default-hero.jpg';
+                  e.currentTarget.alt = 'Default hero image';
+                }}
               />
               
               {/* Floating feature cards - only visible on larger screens */}
@@ -135,4 +145,4 @@ const Hero = () => {
   );
 };
 
-export default Hero; 
+export default Hero;

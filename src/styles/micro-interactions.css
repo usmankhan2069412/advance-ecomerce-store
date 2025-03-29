@@ -1,0 +1,81 @@
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes lift {
+  0% {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  100% {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+}
+
+@keyframes checkmark {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  animation: lift 0.2s ease forwards;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, 
+    var(--skeleton-start) 0%, 
+    var(--skeleton-middle) 50%, 
+    var(--skeleton-end) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.btn-morphing {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-morphing .checkmark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+}
+
+.btn-morphing.success .checkmark {
+  animation: checkmark 0.3s ease forwards;
+}
+
+.btn-morphing.success .btn-text {
+  opacity: 0;
+}
+
+:root {
+  --skeleton-start: #f0f0f0;
+  --skeleton-middle: #e0e0e0;
+  --skeleton-end: #f0f0f0;
+}
+
+.dark {
+  --skeleton-start: #2a2a2a;
+  --skeleton-middle: #333333;
+  --skeleton-end: #2a2a2a;
+}
