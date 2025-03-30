@@ -40,7 +40,7 @@ export function ProductCarousel({
     onSwiping: () => setIsDragging(true),
     onSwiped: () => setTimeout(() => setIsDragging(false), 100),
     trackMouse: true,
-    preventDefaultTouchmoveEvent: true,
+    touchEventOptions: { passive: false },
   });
 
   useEffect(() => {

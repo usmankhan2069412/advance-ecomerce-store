@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Heart, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 

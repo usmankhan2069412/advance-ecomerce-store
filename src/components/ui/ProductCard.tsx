@@ -37,22 +37,27 @@ interface ProductCardProps {
 const LocalSustainabilityIndicator = ({ score = 3 }: { score?: number }) => {
   const maxScore = 5;
   const tooltipText = `Sustainability Score: ${score}/${maxScore}`;
+  
+  // Use useMemo to prevent recreating the leaf elements on every render
+  const leafElements = React.useMemo(() => {
+    return Array.from({ length: maxScore }).map((_, index) => (
+      <Leaf
+        key={index}
+        className={`h-4 w-4 ${
+          index < score
+            ? "text-green-500 fill-green-500"
+            : "text-gray-300"
+        }`}
+      />
+    ));
+  }, [score, maxScore]);
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex items-center">
-            {Array.from({ length: maxScore }).map((_, index) => (
-              <Leaf
-                key={index}
-                className={`h-4 w-4 ${
-                  index < score
-                    ? "text-green-500 fill-green-500"
-                    : "text-gray-300"
-                }`}
-              />
-            ))}
+            {leafElements}
           </div>
         </TooltipTrigger>
         <TooltipContent>

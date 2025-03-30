@@ -33,7 +33,7 @@
     "gsap": "^3.12.2",
     "lucide-react": "^0.468.0",
     "mixpanel-browser": "^2.61.2",
-    "next": "^15.3.0-canary.24",
+    "next": "^15.2.4",
     "next-themes": "^0.2.1",
     "prettier": "^3.3.3",
     "radix-ui": "^1.1.3",
