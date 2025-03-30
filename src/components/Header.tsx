@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { Search, User, ShoppingBag, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button } from "./ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,15 +52,15 @@ const Header = ({ transparent = false }: HeaderProps) => {
       </div>
 
       <div className="flex items-center space-x-4">
-        <Button variant="ghost" size="icon" className="hidden md:flex">
+        <Button variant="ghost" size="md" className="hidden md:flex">
           <Search className="h-5 w-5" />
         </Button>
 
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="md">
           <User className="h-5 w-5" />
         </Button>
 
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="md" className="relative">
           <ShoppingBag className="h-5 w-5" />
           <span className="absolute -top-1 -right-1 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
             0
@@ -69,7 +69,7 @@ const Header = ({ transparent = false }: HeaderProps) => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="md">
               <Menu className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>

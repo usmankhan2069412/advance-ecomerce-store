@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, ButtonHTMLAttributes, ReactNode, useState } from "react";
+import { forwardRef, ButtonHTMLAttributes, ReactNode, useState, useCallback } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +28,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const [isAdded, setIsAdded] = useState(false);
 
-    const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    const handleClick = useCallback(async (e: React.MouseEvent<HTMLButtonElement>) => {
       if (withCheckmark && !isAdded) {
         setIsAdded(true);
         onClick?.(e);
@@ -37,7 +37,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       } else {
         onClick?.(e);
       }
-    };
+    }, [onClick, withCheckmark, isAdded]);
 
     const sizeClasses = {
       sm: "px-3 py-1.5 text-xs",

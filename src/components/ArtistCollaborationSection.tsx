@@ -1,5 +1,5 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Tooltip,
@@ -104,7 +104,7 @@ const ArtistCollaborationSection = ({
                         <TooltipTrigger asChild>
                           <Button
                             variant="outline"
-                            size="icon"
+                            size="md"
                             className="h-8 w-8 rounded-full bg-green-50 border-green-200 hover:bg-green-100"
                           >
                             <Leaf className="h-4 w-4 text-green-600" />
@@ -127,7 +127,7 @@ const ArtistCollaborationSection = ({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="md" className="h-8 w-8">
                           <Info className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>

@@ -1,21 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Cube } from "lucide-react";
-import { Button } from "./button";
+
+// Correct the import path based on the actual location of the button component
+import { Button } from "./Button"; // Adjusted to reflect the correct relative path
 
 interface ARButtonProps {
   productId?: string;
   productName?: string;
   className?: string;
   variant?:
-    | "default"
-    | "destructive"
-    | "outline"
+    | "primary"
     | "secondary"
+    | "accent"
     | "ghost"
+    | "outline"
     | "link";
-  size?: "default" | "sm" | "lg" | "icon";
+  size?: "sm" | "md" | "lg";
   modelUrl?: string;
   fallbackImageUrl?: string;
 }
@@ -24,8 +25,8 @@ export function ARButton({
   productId = "",
   productName = "Product",
   className = "",
-  variant = "default",
-  size = "default",
+  variant = "primary",
+  size = "md",
   modelUrl,
   fallbackImageUrl,
   ...props
@@ -45,7 +46,7 @@ export function ARButton({
     // Check if AR is supported
     const checkARSupport = () => {
       return !!(
-        navigator.xr?.isSessionSupported ||
+        (navigator as any).xr?.isSessionSupported ||
         // @ts-ignore - webkit AR support
         window.webkit?.messageHandlers?.webxr ||
         // @ts-ignore - Scene Viewer support
@@ -101,8 +102,8 @@ export function ARButton({
       aria-label={`View ${productName} in augmented reality`}
       {...props}
     >
-      <Cube className="mr-2 h-5 w-5" />
-      {size !== "icon" && "View in AR"}
+      {/*<Cube3d className="mr-2 h-5 w-5" />*/}
+      {size !== "sm" && "View in AR"}
     </Button>
   );
 }

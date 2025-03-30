@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, X, Mic, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/card";
 import {
   Tooltip,
@@ -153,7 +153,7 @@ const AISearchBar = ({
           {query && (
             <Button
               variant="ghost"
-              size="icon"
+              size="md"
               onClick={handleClear}
               className="h-8 w-8 rounded-full"
             >
@@ -166,7 +166,7 @@ const AISearchBar = ({
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="md"
                   onClick={handleVoiceSearch}
                   className={cn(
                     "h-8 w-8 rounded-full",
@@ -187,7 +187,7 @@ const AISearchBar = ({
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="md"
                   onClick={handleSearch}
                   className="h-8 w-8 rounded-full text-primary"
                 >

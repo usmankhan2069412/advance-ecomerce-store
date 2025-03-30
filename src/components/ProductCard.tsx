@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Heart, ShoppingBag, Eye, Leaf } from "lucide-react";
 import {
@@ -129,7 +129,7 @@ const ProductCard = ({
         <div className="absolute top-3 right-3">
           <Button
             variant="outline"
-            size="icon"
+            size="md"
             className="rounded-full bg-white/80 backdrop-blur-sm hover:bg-white"
             onClick={handleFavoriteClick}
           >
@@ -174,7 +174,7 @@ const ProductCard = ({
                     </p>
                     <div className="flex items-center mb-4">
                       <SustainabilityIndicator
-                        level={sustainabilityLevelRef.current}
+                        level={sustainabilityScore >= 4 ? "high" : sustainabilityScore >= 3 ? "medium" : "low"}
                         size="md"
                       />
                     </div>
@@ -198,11 +198,11 @@ const ProductCard = ({
                       productId={id}
                       productName={name}
                       variant="outline"
-                      size="icon"
+                      size="md"
                     />
                     <Button
                       variant="outline"
-                      size="icon"
+                      size="md"
                       onClick={() => {
                         setFavorite((prevState) => {
                           const newState = !prevState;

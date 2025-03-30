@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "./ui/Button";
 import { ArrowRight, ChevronDown } from "lucide-react";
 
 interface HeroSectionProps {

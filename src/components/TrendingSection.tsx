@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import ProductCard from "./ProductCard";
-import { Button } from "@/components/ui/button";
+import { Button } from "./ui/Button"; // Adjusted to reflect the correct relative path
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
@@ -119,7 +119,7 @@ const TrendingSection = ({
 
   const categories = [
     "all",
-    ...new Set(products.map((product) => product.category)),
+    ...Array.from(new Set(products.map((product) => product.category)))
   ];
 
   useEffect(() => {
@@ -297,7 +297,7 @@ const TrendingSection = ({
                   <div className="flex justify-center items-center mt-12 space-x-4">
                     <Button
                       variant="outline"
-                      size="icon"
+                      size="md"
                       onClick={prevPage}
                       disabled={currentPage === 0}
                     >
@@ -308,7 +308,7 @@ const TrendingSection = ({
                     </div>
                     <Button
                       variant="outline"
-                      size="icon"
+                      size="md"
                       onClick={nextPage}
                       disabled={currentPage === pageCount - 1}
                     >
