@@ -80,12 +80,9 @@ const ProductCard = ({
   description = "Exquisite hand-crafted silk evening gown with delicate embroidery and a modern silhouette. Perfect for special occasions.",
   sustainabilityScore = 4,
   isNew = true,
-  isFavorite = false,
   onAddToBag = () => {},
   onQuickView = () => {},
-  onFavoriteToggle = () => {},
 }: ProductCardProps) => {
-  const [favorite, setFavorite] = useState(isFavorite);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Use ref for sustainability level to prevent re-renders
@@ -96,16 +93,6 @@ const ProductCard = ({
         ? "medium"
         : "low",
   );
-
-  const handleFavoriteClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setFavorite((prevState) => {
-      const newState = !prevState;
-      onFavoriteToggle(id, newState);
-      return newState;
-    });
-  };
 
   const handleAddToBag = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -123,7 +110,7 @@ const ProductCard = ({
   };
 
   return (
-    <Card className="w-80 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white">
+    <Card className="w-80 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white dark:bg-white">
       <div className="relative h-96 w-full overflow-hidden group">
         <Image
           src={image}
@@ -137,30 +124,13 @@ const ProductCard = ({
             NEW
           </div>
         )}
-        <div className="absolute top-3 right-3">
-          <Button
-            variant="outline"
-            size="md"
-            className="rounded-full bg-white/80 backdrop-blur-sm hover:bg-white"
-            onClick={handleFavoriteClick}
-          >
-            <Heart
-              className={`h-5 w-5 ${favorite ? "fill-red-500 text-red-500" : "text-gray-600"}`}
-            />
-          </Button>
-        </div>
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
                 className="mr-2 bg-white/90 hover:bg-white"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onQuickView(id);
-                  trackProductView(id, name, price);
-                }}
+                onClick={handleQuickViewClick}
               >
                 <Eye className="h-4 w-4 mr-2" />
                 Quick View
@@ -179,8 +149,8 @@ const ProductCard = ({
                 </div>
                 <div className="flex flex-col justify-between">
                   <div>
-                    <h2 className="text-2xl font-semibold mb-2">{name}</h2>
-                    <p className="text-xl font-medium mb-4">
+                    <h2 className="text-2xl font-semibold mb-2 text-gray-900">{name}</h2>
+                    <p className="text-xl font-medium mb-4 text-gray-900">
                       ${price.toLocaleString()}
                     </p>
                     <div className="flex items-center mb-4">
@@ -211,21 +181,6 @@ const ProductCard = ({
                       variant="outline"
                       size="md"
                     />
-                    <Button
-                      variant="outline"
-                      size="md"
-                      onClick={() => {
-                        setFavorite((prevState) => {
-                          const newState = !prevState;
-                          onFavoriteToggle(id, newState);
-                          return newState;
-                        });
-                      }}
-                    >
-                      <Heart
-                        className={`h-5 w-5 ${favorite ? "fill-red-500 text-red-500" : "text-gray-600"}`}
-                      />
-                    </Button>
                   </div>
                 </div>
               </div>
@@ -235,13 +190,13 @@ const ProductCard = ({
       </div>
       <CardContent className="pt-4">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="font-medium text-lg truncate">{name}</h3>
+          <h3 className="font-medium text-lg truncate text-gray-900">{name}</h3>
           <LocalSustainabilityIndicator score={sustainabilityScore} />
         </div>
         <p className="text-gray-600 text-sm line-clamp-2">{description}</p>
       </CardContent>
       <CardFooter className="flex justify-between items-center pt-0">
-        <p className="font-semibold">${price.toLocaleString()}</p>
+        <p className="font-semibold text-gray-900">${price.toLocaleString()}</p>
         <Button
           size="sm"
           variant="outline"
