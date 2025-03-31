@@ -5,7 +5,6 @@ import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { ThemeToggle } from '@/components/ThemeToggle';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -28,12 +27,9 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
       </head>
       <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
-      <body className={`${inter.className} antialiased bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}>
+      <body className={`${inter.className} antialiased bg-white text-gray-900`}>
         <ThemeProvider>
           <AuthProvider>
-            <div className="fixed top-4 right-4 z-50">
-              <ThemeToggle />
-            </div>
             {children}
           </AuthProvider>
         </ThemeProvider>

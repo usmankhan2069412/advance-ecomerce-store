@@ -1,6 +1,9 @@
-import React from "react";
+
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, User, ShoppingBag, Menu } from "lucide-react";
+import { User, ShoppingBag, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/Button";
 import {
@@ -15,6 +18,16 @@ interface HeaderProps {
 }
 
 const Header = ({ transparent = false }: HeaderProps) => {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   const navItems = [
     { label: "New Arrivals", href: "/new-arrivals" },
     { label: "Collections", href: "/collections" },
@@ -28,8 +41,10 @@ const Header = ({ transparent = false }: HeaderProps) => {
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-50 w-full py-4 px-6 flex items-center justify-between transition-colors duration-300",
-        transparent
+        transparent && !isScrolled
           ? "bg-transparent text-white"
+          : isScrolled
+          ? "bg-black text-white shadow-sm"
           : "bg-white text-black shadow-sm",
       )}
     >
@@ -51,20 +66,16 @@ const Header = ({ transparent = false }: HeaderProps) => {
         </nav>
       </div>
 
-      <div className="flex items-center space-x-4">
-        <Button variant="ghost" size="md" className="hidden md:flex">
-          <Search className="h-5 w-5" />
-        </Button>
-
-        <Button variant="ghost" size="md">
+      <div className="flex items-center space-x-2">
+        <Button variant="ghost" size="sm">
           <User className="h-5 w-5" />
         </Button>
 
-        <Button variant="ghost" size="md" className="relative">
-          <ShoppingBag className="h-5 w-5" />
-          <span className="absolute -top-1 -right-1 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+        <Button variant="ghost" size="sm" className="relative">
+          <span className="absolute -top-1 -right-0  text-white text-x rounded-full h-4 w-4 flex items-center justify-center">
             0
           </span>
+          <ShoppingBag className="h-5 w-5" />
         </Button>
 
         <DropdownMenu>
@@ -79,9 +90,7 @@ const Header = ({ transparent = false }: HeaderProps) => {
                 <Link href={item.href}>{item.label}</Link>
               </DropdownMenuItem>
             ))}
-            <DropdownMenuItem asChild>
-              <Link href="/search">Search</Link>
-            </DropdownMenuItem>
+
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
