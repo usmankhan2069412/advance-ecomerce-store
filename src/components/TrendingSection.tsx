@@ -122,10 +122,13 @@ const TrendingSection = ({
     ...Array.from(new Set(products.map((product) => product.category)))
   ];
 
+  // Memoize the products array to prevent unnecessary re-renders
+  const memoizedProducts = React.useMemo(() => products, []);
+  
   useEffect(() => {
     // Use a function to avoid recreating the filtered array on each render
     const getFilteredProducts = () => {
-      let filtered = [...products];
+      let filtered = [...memoizedProducts];
 
       // Filter by category
       if (activeTab !== "all") {
@@ -143,7 +146,7 @@ const TrendingSection = ({
 
     setFilteredProducts(getFilteredProducts());
     setCurrentPage(0); // Reset to first page when filters change
-  }, [activeTab, priceRange, products]);
+  }, [activeTab, priceRange, memoizedProducts]);
 
   const pageCount = Math.ceil(filteredProducts.length / productsPerPage);
   const displayedProducts = filteredProducts.slice(

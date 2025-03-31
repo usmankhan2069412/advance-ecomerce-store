@@ -32,7 +32,8 @@ interface ProductCardProps {
 }
 
 // Create a local sustainability indicator for the product card
-const LocalSustainabilityIndicator = ({ score = 3 }: { score?: number }) => {
+// Memoize the entire component to prevent unnecessary re-renders
+const LocalSustainabilityIndicator = React.memo(({ score = 3 }: { score?: number }) => {
   const maxScore = 5;
   const tooltipText = `Sustainability Score: ${score}/${maxScore}`;
   
@@ -50,6 +51,11 @@ const LocalSustainabilityIndicator = ({ score = 3 }: { score?: number }) => {
     ));
   }, [score, maxScore]);
 
+  // Create a stable reference for the tooltip content
+  const tooltipContent = React.useMemo(() => (
+    <p>{tooltipText}</p>
+  ), [tooltipText]);
+
   return (
     <TooltipProvider>
       <Tooltip>
@@ -59,12 +65,12 @@ const LocalSustainabilityIndicator = ({ score = 3 }: { score?: number }) => {
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{tooltipText}</p>
+          {tooltipContent}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
-};
+});
 
 const ProductCard = ({
   id = "1",
