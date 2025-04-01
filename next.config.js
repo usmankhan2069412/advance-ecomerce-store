@@ -2,18 +2,37 @@
 
 const nextConfig = {
     images: {
-        domains: ['images.unsplash.com'],
+        domains: [
+            'images.unsplash.com',
+            'lbmatrvcyiefxukntwsu.supabase.co'  // Added Supabase domain
+        ],
+    },
+    reactStrictMode: true,
+    swcMinify: true,
+    experimental: {
+        // Remove Turbopack config as it's causing issues
+        optimizeCss: true,
+        scrollRestoration: true,
+    },
+    // Add CORS headers for API routes
+    async headers() {
+        return [
+            {
+                source: '/api/:path*',
+                headers: [
+                    { key: 'Access-Control-Allow-Origin', value: '*' },
+                    { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE' },
+                ]
+            }
+        ]
     }
 };
 
+// Simplified Tempo integration
 if (process.env.NEXT_PUBLIC_TEMPO) {
-    nextConfig["experimental"] = {
-        // NextJS 13.4.8 up to 14.1.3:
-        // swcPlugins: [[require.resolve("tempo-devtools/swc/0.86"), {}]],
-        // NextJS 14.1.3 to 14.2.11:
+    nextConfig.experimental = {
+        ...nextConfig.experimental,
         swcPlugins: [[require.resolve("tempo-devtools/swc/0.90"), {}]]
-
-        // NextJS 15+ (Not yet supported, coming soon)
     }
 }
 

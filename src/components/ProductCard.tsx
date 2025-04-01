@@ -4,7 +4,8 @@ import React, { useState, useRef } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Heart, ShoppingBag, Eye, Leaf } from "lucide-react";
 import {
   Tooltip,
@@ -137,6 +138,9 @@ const ProductCard = ({
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[800px] bg-white">
+              <DialogTitle asChild>
+                <VisuallyHidden>{name} - Quick View</VisuallyHidden>
+              </DialogTitle>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="relative h-[400px] w-full">
                   <Image
