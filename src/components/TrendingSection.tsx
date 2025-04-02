@@ -9,126 +9,78 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { productApi, Product } from "@/services/api";
 
 interface TrendingSectionProps {
   title?: string;
   subtitle?: string;
-  products?: Array<{
-    id: string;
-    name: string;
-    price: number;
-    image: string;
-    description: string;
-    sustainabilityScore: number;
-    isNew: boolean;
-    isFavorite: boolean;
-    category: string;
-  }>;
+  products?: Product[];
 }
 
 const TrendingSection = ({
   title = "Trending Now",
   subtitle = "Curated for your unique style preferences",
-  products = [
-    {
-      id: "1",
-      name: "Silk Couture Evening Gown",
-      price: 1299.99,
-      image:
-        "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=400&q=80",
-      description:
-        "Exquisite hand-crafted silk evening gown with delicate embroidery and a modern silhouette.",
-      sustainabilityScore: 4,
-      isNew: true,
-      isFavorite: false,
-      category: "dresses",
-    },
-    {
-      id: "2",
-      name: "Cashmere Oversized Coat",
-      price: 2499.99,
-      image:
-        "https://images.unsplash.com/photo-1548624313-0396c75e4b1a?w=400&q=80",
-      description:
-        "Luxurious oversized cashmere coat with minimalist design and exceptional warmth.",
-      sustainabilityScore: 3,
-      isNew: true,
-      isFavorite: false,
-      category: "outerwear",
-    },
-    {
-      id: "3",
-      name: "Leather Platform Boots",
-      price: 899.99,
-      image:
-        "https://images.unsplash.com/photo-1605812860427-4024433a70fd?w=400&q=80",
-      description:
-        "Statement platform boots crafted from premium leather with architectural heel design.",
-      sustainabilityScore: 2,
-      isNew: false,
-      isFavorite: true,
-      category: "footwear",
-    },
-    {
-      id: "4",
-      name: "Structured Wool Blazer",
-      price: 1199.99,
-      image:
-        "https://images.unsplash.com/photo-1591369822096-ffd140ec948f?w=400&q=80",
-      description:
-        "Precision-tailored wool blazer with strong shoulders and contemporary proportions.",
-      sustainabilityScore: 5,
-      isNew: false,
-      isFavorite: false,
-      category: "outerwear",
-    },
-    {
-      id: "5",
-      name: "Embellished Clutch Bag",
-      price: 799.99,
-      image:
-        "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80",
-      description:
-        "Artisanal clutch bag with hand-applied crystal embellishments and satin finish.",
-      sustainabilityScore: 3,
-      isNew: true,
-      isFavorite: false,
-      category: "accessories",
-    },
-    {
-      id: "6",
-      name: "Silk Printed Scarf",
-      price: 349.99,
-      image:
-        "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80",
-      description:
-        "Limited edition silk scarf featuring original artwork from our artist collaboration series.",
-      sustainabilityScore: 4,
-      isNew: false,
-      isFavorite: true,
-      category: "accessories",
-    },
-  ],
+  products,
 }: TrendingSectionProps) => {
+  const [loading, setLoading] = useState(true);
+  const [productData, setProductData] = useState<Product[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [priceRange, setPriceRange] = useState([0, 3000]);
-  const [filteredProducts, setFilteredProducts] = useState(products);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const productsPerPage = 3;
 
-  const categories = [
-    "all",
-    ...Array.from(new Set(products.map((product) => product.category)))
-  ];
-
-  // Memoize the products array to prevent unnecessary re-renders
-  const memoizedProducts = React.useMemo(() => products, []);
-  
+  // Fetch products from API if not provided as props
   useEffect(() => {
+    const fetchProducts = async () => {
+      if (products) {
+        setProductData(products);
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        const data = await productApi.getProducts({
+          sortBy: 'created_at',
+          sortOrder: 'desc',
+          limit: 10
+        });
+        setProductData(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError('Failed to load products. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [products]);
+
+  // Get unique categories from products
+  const categories = React.useMemo(() => {
+    if (!productData.length) return ["all"];
+    
+    return [
+      "all",
+      ...Array.from(new Set(productData.map((product) => product.category)))
+    ];
+  }, [productData]);
+
+  // Filter products based on active tab and price range
+  useEffect(() => {
+    if (!productData.length) {
+      setFilteredProducts([]);
+      return;
+    }
+    
     // Use a function to avoid recreating the filtered array on each render
     const getFilteredProducts = () => {
-      let filtered = [...memoizedProducts];
+      let filtered = [...productData];
 
       // Filter by category
       if (activeTab !== "all") {
@@ -146,7 +98,7 @@ const TrendingSection = ({
 
     setFilteredProducts(getFilteredProducts());
     setCurrentPage(0); // Reset to first page when filters change
-  }, [activeTab, priceRange, memoizedProducts]);
+  }, [activeTab, priceRange, productData]);
 
   const pageCount = Math.ceil(filteredProducts.length / productsPerPage);
   const displayedProducts = filteredProducts.slice(
@@ -180,6 +132,42 @@ const TrendingSection = ({
     console.log(`Product ${id} favorite status: ${isFavorite}`);
     // Here you would update the favorite status in your state/database
   };
+
+  if (loading) {
+    return (
+      <section className="w-full py-16 px-4 md:px-8 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+            <div>
+              <div className="h-8 w-48 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-4 w-64 bg-gray-200 animate-pulse rounded mt-2"></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white p-4 rounded-lg shadow-sm">
+                <div className="h-64 bg-gray-200 animate-pulse rounded-md mb-4"></div>
+                <div className="h-6 w-3/4 bg-gray-200 animate-pulse rounded mb-2"></div>
+                <div className="h-4 w-1/2 bg-gray-200 animate-pulse rounded"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="w-full py-16 px-4 md:px-8 bg-gray-50">
+        <div className="max-w-7xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">{title}</h2>
+          <p className="text-red-500 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="w-full py-16 px-4 md:px-8 bg-gray-50">

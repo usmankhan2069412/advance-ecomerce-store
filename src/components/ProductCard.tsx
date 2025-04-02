@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef /* Removed useRef */ } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
@@ -19,17 +19,17 @@ import { ProductView3D } from "@/components/ui/ProductView3D";
 import { trackProductView, trackAddToCart } from "@/lib/analytics";
 
 interface ProductCardProps {
-  id?: string;
+  id?: string; // Consider making this required: id: string;
   name?: string;
   price?: number;
   image?: string;
   description?: string;
   sustainabilityScore?: number;
   isNew?: boolean;
-  isFavorite?: boolean;
+  isFavorite?: boolean; // This prop is defined but not used
   onAddToBag?: (id: string) => void;
   onQuickView?: (id: string) => void;
-  onFavoriteToggle?: (id: string, isFavorite: boolean) => void;
+  onFavoriteToggle?: (id: string, isFavorite: boolean) => void; // This prop is defined but not used
 }
 
 // Create a local sustainability indicator for the product card
@@ -37,7 +37,7 @@ interface ProductCardProps {
 const LocalSustainabilityIndicator = React.memo(({ score = 3 }: { score?: number }) => {
   const maxScore = 5;
   const tooltipText = `Sustainability Score: ${score}/${maxScore}`;
-  
+
   // Use useMemo to prevent recreating the leaf elements on every render
   const leafElements = React.useMemo(() => {
     return Array.from({ length: maxScore }).map((_, index) => (
@@ -73,42 +73,50 @@ const LocalSustainabilityIndicator = React.memo(({ score = 3 }: { score?: number
   );
 });
 
+// Assign a display name for better debugging
+LocalSustainabilityIndicator.displayName = 'LocalSustainabilityIndicator';
+
 const ProductCard = ({
-  id = "1",
-  name = "Silk Couture Evening Gown",
-  price = 1299.99,
-  image = "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=400&q=80",
-  description = "Exquisite hand-crafted silk evening gown with delicate embroidery and a modern silhouette. Perfect for special occasions.",
-  sustainabilityScore = 4,
-  isNew = true,
+  id, // If id is always required, change to id: string in props and remove optional chaining below if needed
+  name,
+  price,
+  image,
+  description,
+  sustainabilityScore = 3,
+  isNew = false,
+  // isFavorite and onFavoriteToggle are unused currently
   onAddToBag = () => {},
   onQuickView = () => {},
 }: ProductCardProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Use ref for sustainability level to prevent re-renders
-  const sustainabilityLevelRef = useRef(
-    sustainabilityScore >= 4
-      ? "high"
-      : sustainabilityScore >= 3
-        ? "medium"
-        : "low",
-  );
+  // Removed the useRef for sustainabilityLevelRef
 
   const handleAddToBag = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onAddToBag(id);
-    trackAddToCart(id, name, price);
+    if (id) { // Add check if id might be undefined
+      onAddToBag(id);
+      trackAddToCart(id as string, name as string, price as number);
+    }
   };
 
   const handleQuickViewClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onQuickView(id);
-    setIsDialogOpen(true);
-    trackProductView(id, name, price);
+     if (id) { // Add check if id might be undefined
+       onQuickView(id);
+       setIsDialogOpen(true);
+       trackProductView(id as string, name as string, price as number);
+     }
   };
+
+  // Defensive check: If required props are missing, maybe render nothing or a placeholder
+  if (!id || !name || price === undefined || !image) {
+      // Or render a placeholder/skeleton loader
+      console.warn("ProductCard missing required props:", { id, name, price, image });
+      return null;
+  }
 
   return (
     <Card className="w-80 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white dark:bg-white">
@@ -118,13 +126,26 @@ const ProductCard = ({
           alt={name}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
-          priority
+          priority // Use priority carefully, only for above-the-fold images
         />
         {isNew && (
           <div className="absolute top-3 left-3 bg-black text-white text-xs px-2 py-1 rounded-sm">
             NEW
           </div>
         )}
+        {/* Add Favorite Button Here if using isFavorite/onFavoriteToggle */}
+        {/* Example:
+         <button
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent triggering quick view if needed
+              onFavoriteToggle(id, !isFavorite);
+            }}
+            className="absolute top-3 right-3 bg-white/80 rounded-full p-1.5 hover:bg-white text-gray-600 hover:text-red-500 transition-colors z-10"
+            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-500' : 'fill-transparent'}`} />
+          </button>
+        */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -137,7 +158,7 @@ const ProductCard = ({
                 Quick View
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px] bg-white">
+            <DialogContent className="sm:max-w-[800px] bg-white dark:bg-white"> {/* Consider dark mode bg */}
               <DialogTitle asChild>
                 <VisuallyHidden>{name} - Quick View</VisuallyHidden>
               </DialogTitle>
@@ -148,7 +169,7 @@ const ProductCard = ({
                     alt={name}
                     fill
                     className="object-cover rounded-md"
-                    priority
+                    priority // Priority here might be less critical than the card view image
                   />
                 </div>
                 <div className="flex flex-col justify-between">
@@ -158,6 +179,7 @@ const ProductCard = ({
                       ${price.toLocaleString()}
                     </p>
                     <div className="flex items-center mb-4">
+                      {/* Directly calculate level here */}
                       <SustainabilityIndicator
                         level={sustainabilityScore >= 4 ? "high" : sustainabilityScore >= 3 ? "medium" : "low"}
                         size="md"
@@ -171,9 +193,12 @@ const ProductCard = ({
                   <div className="flex gap-3">
                     <Button
                       className="flex-1"
-                      onClick={() => {
+                      onClick={(e) => {
+                        // No need for preventDefault/stopPropagation if it's just a normal button click inside the dialog
                         onAddToBag(id);
                         trackAddToCart(id, name, price);
+                        // Optionally close the dialog after adding to bag:
+                        // setIsDialogOpen(false);
                       }}
                     >
                       <ShoppingBag className="h-4 w-4 mr-2" />
@@ -205,7 +230,7 @@ const ProductCard = ({
           size="sm"
           variant="outline"
           className="rounded-full"
-          onClick={handleAddToBag}
+          onClick={handleAddToBag} // Already calls preventDefault/stopPropagation
         >
           <ShoppingBag className="h-4 w-4 mr-2" />
           Add to Bag
@@ -215,4 +240,6 @@ const ProductCard = ({
   );
 };
 
+// Assign a display name for better debugging
+ProductCard.displayName = 'ProductCard';
 export default ProductCard;

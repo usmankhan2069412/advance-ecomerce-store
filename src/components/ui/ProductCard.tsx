@@ -75,13 +75,13 @@ const LocalSustainabilityIndicator = React.memo(({ score = 3 }: { score?: number
 });
 
 const ProductCard = ({
-  id = "1",
-  name = "Silk Couture Evening Gown",
-  price = 1299.99,
-  image = "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=400&q=80",
-  description = "Exquisite hand-crafted silk evening gown with delicate embroidery and a modern silhouette. Perfect for special occasions.",
-  sustainabilityScore = 4,
-  isNew = true,
+  id,
+  name,
+  price,
+  image,
+  description,
+  sustainabilityScore = 3,
+  isNew = false,
   isFavorite = false,
   onAddToBag = () => {},
   onQuickView = () => {},
@@ -104,7 +104,7 @@ const ProductCard = ({
     e.stopPropagation();
     setFavorite((prevState) => {
       const newState = !prevState;
-      onFavoriteToggle(id, newState);
+      if (id) onFavoriteToggle(id, newState);
       return newState;
     });
   };
@@ -112,24 +112,28 @@ const ProductCard = ({
   const handleAddToBag = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onAddToBag(id);
-    trackAddToCart(id, name, price);
+    if (id) onAddToBag(id);
+    if (id && name && price) {
+      trackAddToCart(id, name, price);
+    }
   };
 
   const handleQuickViewClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onQuickView(id);
+    if (id) onQuickView(id);
     setIsDialogOpen(true);
-    trackProductView(id, name, price);
+    if (id && name && price) {
+      trackProductView(id, name, price);
+    }
   };
 
   return (
     <Card className="w-80 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white">
       <div className="relative h-96 w-full overflow-hidden group">
         <Image
-          src={image}
-          alt={name}
+          src={image || '/placeholder.jpg'}
+          alt={name || 'Product image'}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
           priority
@@ -169,8 +173,8 @@ const ProductCard = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="relative h-[400px] w-full">
                   <Image
-                    src={image}
-                    alt={name}
+                    src={image || '/placeholder.jpg'}
+                    alt={name || 'Product image'}
                     fill
                     className="object-cover rounded-md"
                     priority
@@ -180,7 +184,7 @@ const ProductCard = ({
                   <div>
                     <h2 className="text-2xl font-semibold mb-2">{name}</h2>
                     <p className="text-xl font-medium mb-4">
-                      ${price.toLocaleString()}
+                      ${price?.toLocaleString() ?? '0'}
                     </p>
                     <div className="flex items-center mb-4">
                       <SustainabilityIndicator
@@ -233,7 +237,7 @@ const ProductCard = ({
         <p className="text-gray-600 text-sm line-clamp-2">{description}</p>
       </CardContent>
       <CardFooter className="flex justify-between items-center pt-0">
-        <p className="font-semibold">${price.toLocaleString()}</p>
+        <p className="font-semibold">${price?.toLocaleString() ?? '0'}</p>
         <Button
           size="sm"
           variant="outline"

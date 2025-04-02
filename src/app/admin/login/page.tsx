@@ -54,16 +54,16 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100  p-4">
+      <Card className="w-full bg-white max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center">
               <Shield className="h-8 w-8 text-primary-600" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Admin Login</CardTitle>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <CardTitle className="text-2xl  text-white font-bold">Admin Login</CardTitle>
+          <p className="text-sm text-white ">
             Enter your credentials to access the admin panel
           </p>
         </CardHeader>
@@ -75,8 +75,8 @@ export default function AdminLoginPage() {
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleSubmit} className="space-y-4 text-white">
+            <div className="space-y-2 text-black ">
               <Label htmlFor="email">Email</Label>
               <Input 
                 id="email"
@@ -88,9 +88,9 @@ export default function AdminLoginPage() {
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-2 text-black">
               <Label htmlFor="password">Password</Label>
-              <Input 
+              <Input  
                 id="password"
                 type="password"
                 value={password}
@@ -101,7 +101,7 @@ export default function AdminLoginPage() {
             
             <Button 
               type="submit" 
-              className="w-full"
+              className="w-full border-white"
               disabled={isLoading}
             >
               {isLoading ? (

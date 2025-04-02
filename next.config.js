@@ -4,17 +4,42 @@ const nextConfig = {
     images: {
         domains: [
             'images.unsplash.com',
-            'lbmatrvcyiefxukntwsu.supabase.co'  // Added Supabase domain
+            'lbmatrvcyiefxukntwsu.supabase.co'
         ],
     },
     reactStrictMode: true,
-    swcMinify: true,
-    experimental: {
-        // Remove Turbopack config as it's causing issues
-        optimizeCss: true,
-        scrollRestoration: true,
+    webpack: (config, { isServer }) => {
+        // Optimize chunk loading
+        config.optimization.splitChunks = {
+            chunks: 'all',
+            minSize: 20000,
+            maxSize: 70000,
+            cacheGroups: {
+                default: false,
+                vendors: false,
+                commons: {
+                    name: 'commons',
+                    chunks: 'all',
+                    minChunks: 2,
+                    reuseExistingChunk: true,
+                },
+                shared: {
+                    name: (module, chunks) => {
+                        return `shared-${chunks.map(c => c.name).join('-')}`
+                    },
+                    test: /[\\/]node_modules[\\/]/,
+                    chunks: 'all',
+                    minChunks: 2,
+                    reuseExistingChunk: true,
+                }
+            }
+        };
+        return config;
     },
-    // Add CORS headers for API routes
+    experimental: {
+        optimizeCss: true,
+        scrollRestoration: true
+    },
     async headers() {
         return [
             {
@@ -28,7 +53,7 @@ const nextConfig = {
     }
 };
 
-// Simplified Tempo integration
+// Tempo integration (if needed)
 if (process.env.NEXT_PUBLIC_TEMPO) {
     nextConfig.experimental = {
         ...nextConfig.experimental,
