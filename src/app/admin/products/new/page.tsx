@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminLayout from "@/components/admin/AdminLayout";
 import ProductForm, { ProductFormData } from "@/components/admin/ProductForm";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { productService } from "@/services/productService";

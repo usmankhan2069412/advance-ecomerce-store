@@ -180,9 +180,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-white transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-white transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="flex h-full flex-col">
           <div className="flex h-16 items-center justify-center border-b px-4">
@@ -197,9 +196,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                     <div className="space-y-1">
                       <button
                         onClick={() => toggleMenu(item.key)}
-                        className={`flex items-center justify-between w-full px-4 py-2 text-left text-gray-700 rounded-md hover:bg-gray-100 hover:text-gray-900 ${
-                          expandedMenus[item.key] ? 'bg-gray-100' : ''
-                        }`}
+                        className={`flex items-center justify-between w-full px-4 py-2 text-left text-gray-700 rounded-md hover:bg-gray-100 hover:text-gray-900 ${expandedMenus[item.key] ? 'bg-gray-100' : ''
+                          }`}
                       >
                         <div className="flex items-center">
                           {item.icon}
@@ -211,18 +209,17 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                           <ChevronDown className="w-4 h-4" />
                         )}
                       </button>
-                      
+
                       {expandedMenus[item.key] && (
                         <ul className="pl-10 space-y-1">
                           {item.children.map((child, childIndex) => (
                             <li key={childIndex}>
                               <Link href={child.path}>
                                 <span
-                                  className={`block px-4 py-2 text-sm rounded-md ${
-                                    isActive(child.path)
+                                  className={`block px-4 py-2 text-sm rounded-md ${isActive(child.path)
                                       ? 'bg-blue-500 text-white'
                                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                                  }`}
+                                    }`}
                                 >
                                   {child.name}
                                 </span>
@@ -233,22 +230,20 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                       )}
                     </div>
                   ) : (
-                    <Link href={item.path}>
-                      <span
-                        className={`flex items-center px-4 py-2 rounded-md ${
-                          isActive(item.path)
-                            ? 'bg-blue-500 text-white'
-                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    <Link
+                      href={item.path || '#'}
+                      className={`flex items-center px-4 py-2 rounded-md ${isActive(item.path || '')
+                          ? 'bg-blue-500 text-white'
+                          : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                         }`}
-                      >
-                        {item.icon}
-                        <span className="ml-3">{item.name}</span>
-                      </span>
+                    >
+                      {item.icon}
+                      <span className="ml-3">{item.name}</span>
                     </Link>
                   )}
                 </li>
               ))}
-              
+
               <li className="mt-6">
                 <button
                   onClick={handleLogout}
@@ -265,7 +260,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="h-16 md:hidden"></div>
-        
+
         <main className="flex-1 p-4 overflow-y-auto">
           <div className="container mx-auto">
             {children}

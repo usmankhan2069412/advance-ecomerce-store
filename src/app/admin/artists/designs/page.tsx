@@ -1,7 +1,7 @@
 import React from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle, XCircle, MessageSquare, Eye } from "lucide-react";
 
@@ -80,24 +80,24 @@ export default function ArtistDesignsPage() {
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="md">
                       <Eye className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
-                      size="icon"
+                      size="md"
                       className="text-green-600"
                     >
                       <CheckCircle className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
-                      size="icon"
+                      size="md"
                       className="text-red-600"
                     >
                       <XCircle className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="md">
                       <MessageSquare className="h-4 w-4" />
                     </Button>
                   </div>
@@ -167,7 +167,7 @@ export default function ArtistDesignsPage() {
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="md">
                       <Eye className="h-4 w-4" />
                     </Button>
                     <Button variant="outline" size="sm">
@@ -226,7 +226,7 @@ export default function ArtistDesignsPage() {
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="md">
                       <Eye className="h-4 w-4" />
                     </Button>
                     <Button variant="outline" size="sm">

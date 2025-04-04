@@ -4,7 +4,8 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext';
-import { ThemeProvider } from '@/components/ThemeProvider';
+// Remove these lines if they exist:
+
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -28,11 +29,9 @@ export default function RootLayout({
       </head>
       <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
       <body className={`${inter.className} antialiased bg-white text-gray-900`}>
-        <ThemeProvider>
           <AuthProvider>
             {children}
           </AuthProvider>
-        </ThemeProvider>
         <TempoInit />
       </body>
     </html>

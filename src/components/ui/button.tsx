@@ -10,6 +10,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   isLoading?: boolean;
   withCheckmark?: boolean;
+  asChild?: boolean;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -68,7 +69,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         onClick={handleClick}
         disabled={isLoading}
-        {...props}
+        {...Object.entries(props).reduce((acc, [key, value]) => {
+          if (key !== 'asChild') (acc as any)[key] = value;
+          return acc;
+        }, {})}
       >
         {isLoading ? (
           <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />

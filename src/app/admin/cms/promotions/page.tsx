@@ -1,7 +1,7 @@
 import React from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { PlusCircle, Edit, Trash2, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -83,13 +83,13 @@ export default function PromotionsPage() {
                       </span>
                     </div>
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="icon">
+                      <Button variant="outline" size="md">
                         <BarChart3 className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon">
+                      <Button variant="outline" size="md">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon">
+                      <Button variant="outline" size="md">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -142,10 +142,10 @@ export default function PromotionsPage() {
                       {campaign.status}
                     </span>
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="icon">
+                      <Button variant="outline" size="md">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon">
+                      <Button variant="outline" size="md">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -201,7 +201,7 @@ export default function PromotionsPage() {
                       Conversion: {campaign.conversions}
                     </p>
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="icon">
+                      <Button variant="outline" size="md">
                         <BarChart3 className="h-4 w-4" />
                       </Button>
                     </div>

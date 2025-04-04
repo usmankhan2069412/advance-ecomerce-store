@@ -69,13 +69,13 @@ const ArtistCollaborationSection = ({
   subtitle = "Limited edition pieces co-created with AI",
 }: ArtistCollaborationSectionProps) => {
   return (
-    <section className="w-full py-16 px-4 md:px-8 bg-white dark:bg-gray-950">
+    <section className="w-full py-16 px-4 md:px-8 bg-white ">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900 dark:text-gray-50">
+          <h2 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900 ">
             {title}
           </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600  max-w-2xl mx-auto">
             {subtitle}
           </p>
         </div>
@@ -84,9 +84,9 @@ const ArtistCollaborationSection = ({
           {collaborations.map((collab) => (
             <Card
               key={collab.id}
-              className="overflow-hidden border border-gray-200 dark:border-gray-800 transition-all duration-300 hover:shadow-lg"
+              className="overflow-hidden border border-gray-200  transition-all duration-300 hover:shadow-lg"
             >
-              <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 dark:bg-gray-800">
+              <div className="relative aspect-[4/5] overflow-hidden bg-gray-100">
                 <img
                   src={collab.imageUrl}
                   alt={collab.name}
@@ -121,7 +121,7 @@ const ArtistCollaborationSection = ({
 
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-50">
+                  <h3 className="text-xl font-semibold text-gray-900 ">
                     {collab.name}
                   </h3>
                   <TooltipProvider>
@@ -142,17 +142,17 @@ const ArtistCollaborationSection = ({
 
                 <div className="flex items-center mb-4">
                   <Star className="h-4 w-4 text-amber-500 mr-1" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="text-sm font-medium text-gray-700 ">
                     By {collab.artistName}
                   </span>
                 </div>
 
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-6 line-clamp-3">
+                <p className="text-gray-600  text-sm mb-6 line-clamp-3">
                   {collab.description}
                 </p>
 
                 <div className="flex justify-between items-center">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-sm text-gray-500 ">
                     Release:{" "}
                     {new Date(collab.releaseDate).toLocaleDateString("en-US", {
                       month: "short",

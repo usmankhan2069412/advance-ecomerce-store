@@ -119,7 +119,7 @@ const ProductCard = ({
   }
 
   return (
-    <Card className="w-80 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white dark:bg-white">
+    <Card className="w-80 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white ">
       <div className="relative h-96 w-full overflow-hidden group">
         <Image
           src={image}
@@ -158,7 +158,7 @@ const ProductCard = ({
                 Quick View
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px] bg-white dark:bg-white"> {/* Consider dark mode bg */}
+            <DialogContent className="sm:max-w-[800px] bg-white "> {/* Consider dark mode bg */}
               <DialogTitle asChild>
                 <VisuallyHidden>{name} - Quick View</VisuallyHidden>
               </DialogTitle>

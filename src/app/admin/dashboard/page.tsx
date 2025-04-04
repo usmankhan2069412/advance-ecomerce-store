@@ -11,7 +11,7 @@ import { BarChart3, Users, ShoppingBag, DollarSign, TrendingUp } from "lucide-re
  */
 export default function DashboardPage() {
   return (
-    <AdminLayout>
+    <AdminLayout >
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
@@ -99,7 +99,7 @@ export default function DashboardPage() {
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-500">No recent activity to display.</p>
+            <p className="text-gray-500 bg-white">No recent activity to display.</p>
           </CardContent>
         </Card>
       </div>

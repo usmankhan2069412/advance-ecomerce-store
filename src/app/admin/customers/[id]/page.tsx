@@ -1,6 +1,6 @@
 import React from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {
   Card,
   CardContent,
@@ -45,7 +45,7 @@ export default function CustomerDetailsPage({
       <div className="grid gap-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" asChild>
+            <Button variant="outline" size="md" asChild>
               <a href="/admin/customers">
                 <ArrowLeft className="h-4 w-4" />
               </a>
@@ -66,7 +66,7 @@ export default function CustomerDetailsPage({
               <Edit className="mr-2 h-4 w-4" />
               Edit Profile
             </Button>
-            <Button variant="destructive">
+            <Button variant="outline">
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Account
             </Button>

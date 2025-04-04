@@ -207,3 +207,19 @@ export const productApi = {
     }
   }
 };
+
+// Update the base URL to match your backend
+const BASE_URL = 'http://localhost:8000';  // or whatever port your FastAPI runs on
+
+export const getProducts = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/products`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    throw new Error('Network Error: Unable to connect to the server. Please check if the backend server is running.');
+  }
+};

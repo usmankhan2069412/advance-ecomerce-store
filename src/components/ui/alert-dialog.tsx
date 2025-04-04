@@ -1,8 +1,8 @@
+
 import * as React from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
-
 import { cn } from "../../lib/utils";
-import { buttonVariants } from "../../components/ui/button";
+import { Button } from "../../components/ui/Button";  // Keep this import
 
 const AlertDialog = AlertDialogPrimitive.Root;
 
@@ -107,11 +107,12 @@ const AlertDialogAction = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Action
     ref={ref}
-    className={cn(buttonVariants(), className)}
+    className={cn("inline-flex items-center justify-center", className)}
     {...props}
-  />
+  >
+    <Button variant="primary" {...props} />
+  </AlertDialogPrimitive.Action>
 ));
-AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName;
 
 const AlertDialogCancel = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
@@ -119,13 +120,11 @@ const AlertDialogCancel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Cancel
     ref={ref}
-    className={cn(
-      buttonVariants({ variant: "outline" }),
-      "mt-2 sm:mt-0",
-      className,
-    )}
+    className={cn("mt-2 sm:mt-0", className)}
     {...props}
-  />
+  >
+    <Button variant="outline" {...props} />
+  </AlertDialogPrimitive.Cancel>
 ));
 AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName;
 
