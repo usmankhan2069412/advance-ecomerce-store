@@ -4,10 +4,13 @@ import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { Plus, Search, Filter, Upload, Archive, Tag, Edit, Trash } from "lucide-react";
+import { productService } from "@/services/productService";
+import { toast } from "sonner";
 
 /**
  * Products Management Page
@@ -15,12 +18,67 @@ import { Plus, Search, Filter, Upload, Archive, Tag, Edit, Trash } from "lucide-
  */
 export default function ProductsManagement() {
   const [products, setProducts] = useState<any[]>([]);
-  
-  // Load products from localStorage on component mount
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [categories, setCategories] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 10;
+
+  // Load products from Supabase on component mount
   useEffect(() => {
-    const storedProducts = JSON.parse(localStorage.getItem('products') || '[]');
-    setProducts(storedProducts);
+    fetchProducts();
   }, []);
+
+  // Fetch products from Supabase
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await productService.getProducts();
+      setProducts(data);
+      
+      // Extract unique categories
+      const uniqueCategories = Array.from(new Set(data.map(p => p.category)));
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast.error('Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle product deletion
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+
+    try {
+      await productService.deleteProduct(id);
+      toast.success('Product deleted successfully');
+      fetchProducts(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast.error('Failed to delete product');
+    }
+  };
+
+  // Filter products based on search and category
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.sku?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCategory = 
+      selectedCategory === 'all' || product.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const startIndex = (currentPage - 1) * productsPerPage;
+  const paginatedProducts = filteredProducts.slice(startIndex, startIndex + productsPerPage);
   
   return (
     <AdminLayout>
@@ -59,25 +117,24 @@ export default function ProductsManagement() {
                   type="search"
                   placeholder="Search products..."
                   className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <Filter className="h-4 w-4" />
-                  Filters
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <Tag className="h-4 w-4" />
-                  Categories
-                </Button>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
@@ -117,12 +174,26 @@ export default function ProductsManagement() {
                       </tr>
                     </thead>
                     <tbody>
-                      {products.length > 0 ? (
-                        products.map((product) => (
+                      {loading ? (
+                        <tr>
+                          <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                            Loading products...
+                          </td>
+                        </tr>
+                      ) : paginatedProducts.length > 0 ? (
+                        paginatedProducts.map((product) => (
                           <tr key={product.id} className="border-b">
                             <td className="p-4 align-middle">
                               <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-md bg-gray-100"></div>
+                                <div className="h-10 w-10 rounded-md bg-gray-100">
+                                  {product.images?.[0] && (
+                                    <img
+                                      src={product.images[0]}
+                                      alt={product.name}
+                                      className="h-full w-full object-cover rounded-md"
+                                    />
+                                  )}
+                                </div>
                                 <div>
                                   <div className="font-medium">{product.name}</div>
                                   <div className="text-sm text-muted-foreground">
@@ -132,7 +203,7 @@ export default function ProductsManagement() {
                               </div>
                             </td>
                             <td className="p-4 align-middle">
-                              ${product.price.toFixed(2)}
+                              ${product.price?.toFixed(2)}
                             </td>
                             <td className="p-4 align-middle">
                               {product.inventory}
@@ -142,10 +213,16 @@ export default function ProductsManagement() {
                             </td>
                             <td className="p-4 align-middle text-right">
                               <div className="flex justify-end gap-2">
-                                <Button size="sm" variant="ghost">
-                                  <Edit className="h-4 w-4" />
+                                <Button size="sm" variant="ghost" asChild>
+                                  <Link href={`/admin/products/${product.id}`}>
+                                    <Edit className="h-4 w-4" />
+                                  </Link>
                                 </Button>
-                                <Button size="sm" variant="ghost">
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  onClick={() => handleDelete(product.id)}
+                                >
                                   <Trash className="h-4 w-4" />
                                 </Button>
                               </div>
@@ -163,13 +240,23 @@ export default function ProductsManagement() {
                   </table>
                 </div>
                 <div className="flex justify-between items-center p-4">
-                  <Button variant="outline" size="sm" disabled>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  >
                     Previous
                   </Button>
                   <div className="text-sm text-muted-foreground">
-                    Page 1 of {Math.max(1, Math.ceil(products.length / 10))}
+                    Page {currentPage} of {Math.max(1, totalPages)}
                   </div>
-                  <Button variant="outline" size="sm" disabled={products.length <= 10}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  >
                     Next
                   </Button>
                 </div>

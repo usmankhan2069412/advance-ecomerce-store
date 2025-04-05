@@ -94,7 +94,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       key: "products",
       children: [
         { name: "All Products", path: "/admin/products" },
-        { name: "Add Product", path: "/admin/products/add" },
+        { name: "Add Product", path: "/admin/products/new" },
         { name: "Categories", path: "/admin/categories" },
         { name: "Attributes", path: "/admin/attributes" },
       ],

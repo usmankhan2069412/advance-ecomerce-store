@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button } from "@/components/ui/Button";
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, X, Upload, Plus, Trash } from "lucide-react";
 import Image from "next/image";
+import { toast } from "sonner";
+import { categoryService } from "@/services/categoryService";
 
 /**
  * Product form interface
@@ -58,17 +61,55 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
       aiRecommendationReason: "",
     }
   );
-  
+
   const [newTag, setNewTag] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  
+  const [categories, setCategories] = useState<any[]>([]);
+
+  // Function to fetch categories
+  const fetchCategories = async () => {
+    try {
+      // The categoryService now handles errors internally and returns default categories
+      const data = await categoryService.getCategories();
+      console.log('Fetched categories:', data);
+
+      if (data && data.length > 0) {
+        setCategories(data);
+      } else {
+        // If no categories returned, use default categories
+        const defaultCategories = categoryService.getDefaultCategories();
+        console.log('Using default categories:', defaultCategories);
+        setCategories(defaultCategories);
+      }
+    } catch (error) {
+      // This should never happen now, but just in case
+      console.error('Unexpected error fetching categories:', error);
+      const defaultCategories = categoryService.getDefaultCategories();
+      console.log('Using default categories due to error:', defaultCategories);
+      setCategories(defaultCategories);
+    }
+  };
+
+  // Load categories on component mount and refresh periodically
+  useEffect(() => {
+    // Initial fetch
+    fetchCategories();
+
+    // Set up a refresh interval to keep categories in sync
+    // This ensures that if categories are added/removed elsewhere, the form will update
+    const intervalId = setInterval(fetchCategories, 5000); // Refresh every 5 seconds
+
+    // Clean up the interval when the component unmounts
+    return () => clearInterval(intervalId);
+  }, []);
+
   /**
    * Handle input change for form fields
    */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     // Handle numeric inputs
     if (type === 'number') {
       setFormData({
@@ -81,7 +122,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
         [name]: value
       });
     }
-    
+
     // Clear error for this field if it exists
     if (errors[name]) {
       setErrors({
@@ -90,7 +131,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
       });
     }
   };
-  
+
   /**
    * Add a new tag to the product
    */
@@ -103,7 +144,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
       setNewTag('');
     }
   };
-  
+
   /**
    * Remove a tag from the product
    */
@@ -113,33 +154,35 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
       tags: formData.tags.filter(tag => tag !== tagToRemove)
     });
   };
-  
+
   /**
    * Handle image upload
    */
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     // In a real app, you would upload to a server
     // For demo, we'll use a data URL
     const reader = new FileReader();
     reader.onload = () => {
       const imageUrl = reader.result as string;
       setImagePreview(imageUrl);
-      
+
       // Add to images array
       setFormData({
         ...formData,
         images: [...formData.images, imageUrl]
       });
+
+      console.log('Image added to form data:', imageUrl.substring(0, 50) + '...');
     };
     reader.readAsDataURL(file);
-    
+
     // Reset the input
     e.target.value = '';
   };
-  
+
   /**
    * Remove an image from the product
    */
@@ -149,78 +192,153 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
       images: formData.images.filter(image => image !== imageToRemove)
     });
   };
-  
+
   /**
    * Validate the form before submission
    */
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Product name is required';
+      toast.error('Product name is required');
     }
-    
+
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
+      toast.error('Description is required');
     }
-    
+
     if (formData.price <= 0) {
       newErrors.price = 'Price must be greater than zero';
+      toast.error('Price must be greater than zero');
     }
-    
+
     if (!formData.category.trim()) {
       newErrors.category = 'Category is required';
+      toast.error('Category is required');
     }
-    
+
     if (!formData.sku.trim()) {
       newErrors.sku = 'SKU is required';
+      toast.error('SKU is required');
     }
-    
+
     if (formData.inventory < 0) {
       newErrors.inventory = 'Inventory cannot be negative';
+      toast.error('Inventory cannot be negative');
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   /**
    * Handle form submission
    */
+  /**
+   * Compress image data to reduce storage size
+   */
+  const compressImages = (images: string[]): string[] => {
+    return images.map(image => {
+      // If it's not a data URL, return as is
+      if (!image.startsWith('data:image')) return image;
+
+      // Basic compression by reducing quality
+      const canvas = document.createElement('canvas');
+      const img = document.createElement('img');
+      img.src = image;
+      canvas.width = Math.min(800, img.width); // Max width 800px
+      canvas.height = (img.height * canvas.width) / img.width;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg', 0.7); // Reduce quality to 70%
+    });
+  };
+
+  /**
+   * Clean up old products if storage is near limit
+   */
+  const cleanupStorage = (currentProducts: ProductFormData[]): ProductFormData[] => {
+    const MAX_PRODUCTS = 50; // Maximum number of products to keep
+    if (currentProducts.length > MAX_PRODUCTS) {
+      return currentProducts.slice(-MAX_PRODUCTS); // Keep only the latest products
+    }
+    return currentProducts;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (validateForm()) {
-      onSubmit(formData);
+      try {
+        // Generate a unique ID for new products
+        if (!formData.id) {
+          formData.id = Date.now().toString();
+        }
+
+        // Compress images before saving
+        const compressedFormData = {
+          ...formData,
+          images: compressImages(formData.images)
+        };
+
+        // Get existing products from localStorage
+        const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
+
+        if (initialData) {
+          // Update existing product
+          const updatedProducts = existingProducts.map((p: ProductFormData) =>
+            p.id === compressedFormData.id ? compressedFormData : p
+          );
+          const cleanedProducts = cleanupStorage(updatedProducts);
+          localStorage.setItem('products', JSON.stringify(cleanedProducts));
+          toast.success('Product updated successfully!');
+        } else {
+          // Add new product
+          const newProducts = [...existingProducts, compressedFormData];
+          const cleanedProducts = cleanupStorage(newProducts);
+          localStorage.setItem('products', JSON.stringify(cleanedProducts));
+          toast.success('Product created successfully!');
+        }
+
+        onSubmit(compressedFormData);
+      } catch (error) {
+        if (error instanceof Error) {
+          toast.error(`Failed to save product: ${error.message}`);
+        } else {
+          toast.error('Failed to save product. Please try again.');
+        }
+      }
     }
   };
-  
+
   return (
     <Card>
-      <CardContent className="p-6">
+      <CardContent className="p-6 bg-white">
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Basic Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Basic Information</h3>
-            
+
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <Label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="name" className="block text-sm font-medium text-gray-700 ">
                   Product Name
                 </Label>
                 <Input
                   type="text"
                   id="name"
                   name="name"
-                  value={formData.name}
+                  value={formData?.name || ""}
                   onChange={handleChange}
                   className={errors.name ? "border-red-500" : ""}
                 />
                 {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
               </div>
-              
+
               <div>
-                <Label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="description" className="block text-sm font-medium text-gray-700 ">
                   Description
                 </Label>
                 <Textarea
@@ -235,14 +353,14 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
               </div>
             </div>
           </div>
-          
+
           {/* Pricing */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Pricing</h3>
-            
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="price" className="block text-sm font-medium text-gray-700 ">
                   Price ($)
                 </Label>
                 <Input
@@ -257,9 +375,9 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                 />
                 {errors.price && <p className="mt-1 text-sm text-red-500">{errors.price}</p>}
               </div>
-              
+
               <div>
-                <Label htmlFor="compareAtPrice" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="compareAtPrice" className="block text-sm font-medium text-gray-700 ">
                   Compare at Price ($)
                 </Label>
                 <Input
@@ -274,14 +392,14 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
               </div>
             </div>
           </div>
-          
+
           {/* Images */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Images</h3>
-            
+
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
               {formData.images.map((image, index) => (
-                <div key={index} className="relative aspect-square rounded-md border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                <div key={index} className="relative aspect-square rounded-md border border-gray-200 bg-gray-50 ">
                   <img
                     src={image}
                     alt={`Product image ${index + 1}`}
@@ -296,8 +414,8 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                   </button>
                 </div>
               ))}
-              
-              <div className="flex aspect-square items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+
+              <div className="flex aspect-square items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-50 ">
                 <label htmlFor="image-upload" className="flex cursor-pointer flex-col items-center justify-center p-4">
                   <Upload className="mb-2 h-6 w-6 text-gray-400" />
                   <span className="text-sm text-gray-500">Upload Image</span>
@@ -312,35 +430,66 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
               </div>
             </div>
           </div>
-          
+
           {/* Organization */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Organization</h3>
-            
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
                   Category
                 </Label>
-                <select
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800"
-                >
-                  <option value="">Select a category</option>
-                  <option value="Clothing">Clothing</option>
-                  <option value="Accessories">Accessories</option>
-                  <option value="Footwear">Footwear</option>
-                  <option value="Home">Home</option>
-                  <option value="Electronics">Electronics</option>
-                </select>
+                <div className="relative">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) => setFormData({ ...formData, category: value })}
+                      className="flex-grow"
+                    >
+                    <SelectTrigger
+                      className={`w-full h-10 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.category ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'}`}
+                    >
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {categories.length > 0 ? (
+                        categories.map((category) => (
+                          <SelectItem
+                            key={category.id}
+                            value={category.id} // Use ID as the value instead of name
+                            className="py-2 px-3 text-sm hover:bg-gray-100 cursor-pointer"
+                          >
+                            {category.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="py-2 px-3 text-sm text-gray-500 italic">No categories available</div>
+                      )}
+                    </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        fetchCategories();
+                        toast.success('Categories refreshed');
+                      }}
+                      className="flex items-center justify-center p-2 h-10 w-10"
+                      title="Refresh Categories"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                      </svg>
+                    </Button>
+                  </div>
+                </div>
                 {errors.category && <p className="mt-1 text-sm text-red-500">{errors.category}</p>}
               </div>
-              
+
               <div>
-                <Label htmlFor="tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="tags" className="block text-sm font-medium text-gray-700 ">
                   Tags
                 </Label>
                 <div className="flex">
@@ -362,12 +511,12 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {formData.tags.map((tag, index) => (
-                    <div key={index} className="flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm dark:bg-gray-700">
+                    <div key={index} className="flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm ">
                       {tag}
                       <button
                         type="button"
                         onClick={() => removeTag(tag)}
-                        className="ml-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        className="ml-1 text-gray-500 hover:text-gray-700 "
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -377,14 +526,14 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
               </div>
             </div>
           </div>
-          
+
           {/* Inventory */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Inventory</h3>
-            
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="sku" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="sku" className="block text-sm font-medium text-gray-700 ">
                   SKU (Stock Keeping Unit)
                 </Label>
                 <Input
@@ -397,9 +546,9 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                 />
                 {errors.sku && <p className="mt-1 text-sm text-red-500">{errors.sku}</p>}
               </div>
-              
+
               <div>
-                <Label htmlFor="inventory" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="inventory" className="block text-sm font-medium text-gray-700 ">
                   Inventory Quantity
                 </Label>
                 <Input
@@ -415,14 +564,14 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
               </div>
             </div>
           </div>
-          
+
           {/* AI Features */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">AI Features</h3>
-            
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="aiMatchScore" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="aiMatchScore" className="block text-sm font-medium text-gray-700 ">
                   AI Match Score (0-100)
                 </Label>
                 <Input
@@ -435,9 +584,9 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                   onChange={handleChange}
                 />
               </div>
-              
+
               <div>
-                <Label htmlFor="aiRecommendationReason" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="aiRecommendationReason" className="block text-sm font-medium text-gray-700 ">
                   AI Recommendation Reason
                 </Label>
                 <Input
@@ -451,7 +600,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
               </div>
             </div>
           </div>
-          
+
           {/* Form Actions */}
           <div className="flex justify-end space-x-3 pt-4">
             <Button
@@ -475,4 +624,4 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
   );
 };
 
-export default ProductForm; 
+export default ProductForm;

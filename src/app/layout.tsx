@@ -4,7 +4,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext';
-// Remove these lines if they exist:
+import { SonnerToaster } from '@/components/ui/sonner-toaster';
 
 
 const inter = Inter({ subsets: ["latin"] });
@@ -32,6 +32,7 @@ export default function RootLayout({
           <AuthProvider>
             {children}
           </AuthProvider>
+        <SonnerToaster />
         <TempoInit />
       </body>
     </html>

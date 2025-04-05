@@ -35,6 +35,23 @@ export default function ProductsPage() {
     { value: 'sustainabilityScore', label: 'Sustainability' },
   ];
 
+  // Listen for product-created events
+  useEffect(() => {
+    const handleProductCreated = (event: any) => {
+      console.log('Product created event received:', event.detail);
+      // Refresh the products list
+      fetchProducts();
+    };
+
+    // Add event listener
+    window.addEventListener('product-created', handleProductCreated);
+
+    // Clean up
+    return () => {
+      window.removeEventListener('product-created', handleProductCreated);
+    };
+  }, []);
+
   // Fetch products from API
   useEffect(() => {
     const fetchProducts = async () => {
@@ -70,15 +87,35 @@ export default function ProductsPage() {
           params.colors = selectedColors.join(',');
         }
 
+        console.log('Fetching products with params:', params);
         const data = await productApi.getProducts(params);
-        
+        console.log('API response:', data);
+
         if (data && data.length > 0) {
-          setProducts(data);
+          // Map the data to ensure it has the correct structure
+          const formattedProducts = data.map(product => ({
+            ...product,
+            // Ensure these fields exist
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image || (product.images && product.images.length > 0 ? product.images[0] : 'https://placehold.co/600x400?text=No+Image'),
+            description: product.description || '',
+            sustainabilityScore: product.sustainabilityScore || product.sustainability_score || 3,
+            isNew: product.isNew || product.is_new || false,
+            isFavorite: product.isFavorite || false,
+            category: product.category || 'Uncategorized',
+            tags: product.tags || [],
+          }));
+
+          console.log('Formatted products:', formattedProducts);
+          setProducts(formattedProducts);
           // In a real app, we would get the total count from the API response
           // For now, estimate based on the data we have
           setTotalProducts(Math.max(data.length * 3, 100)); // Estimate total count
         } else {
           // No products found or empty response
+          console.log('No products found');
           setProducts([]);
           setTotalProducts(0);
         }
@@ -132,22 +169,22 @@ export default function ProductsPage() {
             inventory: 15
           }
         ];
-        
+
         // Filter mock data based on current filters
         let filteredMockProducts = [...mockProducts];
-        
+
         // Apply category filter
         if (selectedCategory && selectedCategory !== 'all') {
           filteredMockProducts = filteredMockProducts.filter(
             product => product.category.toLowerCase() === selectedCategory
           );
         }
-        
+
         // Apply price range filter
         filteredMockProducts = filteredMockProducts.filter(
           product => product.price >= priceRange[0] && product.price <= priceRange[1]
         );
-        
+
         setProducts(filteredMockProducts);
         setTotalProducts(mockProducts.length);
       } finally {
@@ -279,7 +316,7 @@ export default function ProductsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Our Products</h1>
-      
+
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Desktop Sidebar Filters */}
         <div className="hidden lg:block lg:w-1/4">

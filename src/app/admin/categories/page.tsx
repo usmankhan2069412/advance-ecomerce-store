@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit, Trash, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { categoryService } from "@/services/categoryService";
+import { toast } from "sonner";
 
 /**
  * Categories Management Page
@@ -17,53 +19,98 @@ export default function CategoriesPage() {
   const [newCategory, setNewCategory] = useState({ name: "", description: "" });
   const [isAdding, setIsAdding] = useState(false);
 
-  // Load categories from localStorage on component mount
+  // Load categories from Supabase on component mount
   useEffect(() => {
-    const storedCategories = JSON.parse(localStorage.getItem('categories') || '[]');
-    if (storedCategories.length === 0) {
-      // Add some default categories if none exist
-      const defaultCategories = [
-        { id: "cat_1", name: "Clothing", description: "All clothing items", productCount: 12 },
-        { id: "cat_2", name: "Accessories", description: "Bags, jewelry, and more", productCount: 8 },
-        { id: "cat_3", name: "Footwear", description: "Shoes, boots, and sandals", productCount: 5 },
-      ];
-      localStorage.setItem('categories', JSON.stringify(defaultCategories));
-      setCategories(defaultCategories);
-    } else {
-      setCategories(storedCategories);
-    }
+    fetchCategories();
   }, []);
+
+  // Fetch categories from Supabase or fallback
+  const fetchCategories = async () => {
+    try {
+      const data = await categoryService.getCategories();
+
+      if (!data || data.length === 0) {
+        console.log('No categories found or all categories have been deleted');
+      }
+
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      // The categoryService.getCategories method should never throw now,
+      // but just in case, we'll handle it gracefully
+      setCategories([]);
+      toast.error(`Failed to load categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
 
   /**
    * Handle adding a new category
    */
-  const handleAddCategory = () => {
-    if (!newCategory.name.trim()) return;
+  const handleAddCategory = async () => {
+    if (!newCategory.name.trim()) {
+      toast.error('Category name is required');
+      return;
+    }
 
-    const newCategoryItem = {
-      id: `cat_${Math.random().toString(36).substring(2, 10)}`,
-      name: newCategory.name,
-      description: newCategory.description,
-      productCount: 0,
-    };
+    try {
+      const createdCategory = await categoryService.createCategory({
+        name: newCategory.name.trim(),
+        description: newCategory.description.trim(),
+      });
 
-    const updatedCategories = [...categories, newCategoryItem];
-    setCategories(updatedCategories);
-    localStorage.setItem('categories', JSON.stringify(updatedCategories));
-    
-    // Reset form
-    setNewCategory({ name: "", description: "" });
-    setIsAdding(false);
+      // Add the new category to the local state immediately
+      // This ensures it shows up in the table right away
+      setCategories(prevCategories => [
+        ...prevCategories,
+        {
+          ...createdCategory,
+          productCount: 0 // New categories have no products yet
+        }
+      ]);
+
+      // Reset form
+      setNewCategory({ name: "", description: "" });
+      setIsAdding(false);
+
+      toast.success(`Category "${createdCategory.name}" created successfully!`);
+
+      // Also refresh the list to ensure everything is in sync
+      // Use a small delay to ensure the UI updates first
+      setTimeout(() => fetchCategories(), 500);
+    } catch (error) {
+      console.error('Error creating category:', error);
+      // Display the specific error message from the service
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to create category. Please try again.');
+      }
+    }
   };
 
   /**
    * Handle deleting a category
    */
-  const handleDeleteCategory = (id: string) => {
-    if (confirm("Are you sure you want to delete this category?")) {
-      const updatedCategories = categories.filter(category => category.id !== id);
-      setCategories(updatedCategories);
-      localStorage.setItem('categories', JSON.stringify(updatedCategories));
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this category?")) return;
+
+    try {
+      // Get the category name for the success message
+      const categoryToDelete = categories.find(cat => cat.id === id);
+      const categoryName = categoryToDelete?.name || id;
+
+      // Delete the category
+      const success = await categoryService.deleteCategory(id);
+
+      if (success) {
+        toast.success(`Category "${categoryName}" deleted successfully`);
+        fetchCategories(); // Refresh the list
+      } else {
+        throw new Error('Unknown error occurred');
+      }
+    } catch (error) {
+      console.error(`Error deleting category ${id}:`, error);
+      toast.error(`Failed to delete category: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -177,15 +224,15 @@ export default function CategoriesPage() {
                         {category.description}
                       </td>
                       <td className="p-4 align-middle">
-                        {category.productCount}
+                        {category.productCount || 0}
                       </td>
                       <td className="p-4 align-middle text-right">
                         <div className="flex justify-end gap-2">
                           <Button size="sm" variant="ghost">
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => handleDeleteCategory(category.id)}
                           >
@@ -208,4 +255,4 @@ export default function CategoriesPage() {
       </div>
     </AdminLayout>
   );
-} 
+}

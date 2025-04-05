@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ProductCard } from "./ProductCard";
+import ProductCard from "./ProductCard";
 import { ProductListItem } from "./ProductListItem";
 import { SkeletonProductGrid } from "./SkeletonCard";
 import { LayoutSelector } from "./LayoutSelector";
@@ -16,6 +16,8 @@ type Product = {
   description: string;
   sustainabilityScore?: number;
   isNew?: boolean;
+  isFavorite?: boolean;
+  tags?: string[];
 };
 
 interface ProductGridProps {
@@ -64,9 +66,11 @@ export function ProductGrid({
               name={product.name}
               price={product.price}
               image={product.image}
+              description={product.description}
               category={product.category}
               sustainabilityScore={product.sustainabilityScore}
               isNew={product.isNew}
+              isFavorite={product.isFavorite}
             />
           ))}
         </div>
@@ -83,6 +87,7 @@ export function ProductGrid({
               description={product.description}
               sustainabilityScore={product.sustainabilityScore}
               isNew={product.isNew}
+              isFavorite={product.isFavorite}
             />
           ))}
         </div>

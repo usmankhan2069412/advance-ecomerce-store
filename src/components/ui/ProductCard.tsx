@@ -38,7 +38,7 @@ interface ProductCardProps {
 const LocalSustainabilityIndicator = React.memo(({ score = 3 }: { score?: number }) => {
   const maxScore = 5;
   const tooltipText = `Sustainability Score: ${score}/${maxScore}`;
-  
+
   // Use useMemo to prevent recreating the leaf elements on every render
   const leafElements = React.useMemo(() => {
     return Array.from({ length: maxScore }).map((_, index) => (
@@ -252,4 +252,6 @@ const ProductCard = ({
   );
 };
 
+// Export both named and default for compatibility
+export { ProductCard };
 export default ProductCard;
