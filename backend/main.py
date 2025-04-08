@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import os
@@ -8,13 +8,13 @@ import redis
 import time
 import logging
 from logging.handlers import RotatingFileHandler
+import jwt
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-
-# Import routers and utilities
+from supabase import create_client, Client
+# Import product API router
 from product_api import router as product_router
-from utils import get_supabase_client, verify_token
 
 # Configure logging
 logging.basicConfig(
@@ -27,7 +27,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Environment variables validation
 # Environment variables validation
 required_env_vars = ["SUPABASE_KEY", "REDIS_HOST", "REDIS_PORT", "JWT_SECRET"]
 missing_vars = [var for var in required_env_vars if not os.getenv(var)]
@@ -68,10 +67,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include product router
-app.include_router(product_router)
+# Security
+security = HTTPBearer()
 
-# Redis connection
+# Supabase connection
+def get_supabase_client() -> Client:
+    """
+    Get Supabase client connection
+    
+    @return: Supabase client instance
+    """
+    try:
+        supabase_url = "https://lbmatrvcyiefxukntwsu.supabase.co"  # Your project URL
+        supabase_key = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxibWF0cnZjeWllZnh1a250d3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5NjQxNjIsImV4cCI6MjA1NzU0MDE2Mn0.HEkVgFvxORyNhsrgkMpfepfYrdFcI_fp-bIg8wwLdPE")
+        
+        return create_client(supabase_url, supabase_key)
+    except Exception as e:
+        logger.error(f"Supabase connection error: {e}")
+        raise HTTPException(status_code=500, detail=f"Supabase connection error: {str(e)}")
+
 # Redis connection
 try:
     redis_client = redis.Redis(
@@ -118,6 +132,33 @@ class TryOnResult(BaseModel):
 class HealthCheck(BaseModel):
     status: str
     services: Dict[str, Dict[str, Any]]
+
+# Authentication middleware
+async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    Verify JWT token from Authorization header
+    
+    @param credentials: HTTP Authorization credentials
+    @return: Decoded token payload
+    """
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(
+            token, 
+            os.getenv("JWT_SECRET"), 
+            algorithms=["HS256"]
+        )
+        return payload
+    except jwt.PyJWTError as e:
+        logger.warning(f"Authentication error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+# Include product router
+app.include_router(product_router)
 
 # Routes
 @app.get("/")
@@ -177,13 +218,83 @@ async def health_check():
     status_code = status.HTTP_200_OK if health_info["status"] == "healthy" else status.HTTP_503_SERVICE_UNAVAILABLE
     return health_info
 
-# Virtual try-on endpoint removed as it's not being used
-
-# The /api/products/{product_id} endpoint is now handled by the product_api router
+@app.post("/api/try-on", response_model=TryOnResult)
+@limiter.limit("10/minute")
+async def virtual_try_on(request: Request, try_on_data: ProductTryOn, token_payload: Dict = Depends(verify_token)):
+    """
+    Virtual try-on endpoint that processes product images
+    and returns a composite image with the product applied
+    
+    @param request: FastAPI request object
+    @param try_on_data: Product and user image information
+    @param token_payload: Authenticated user information
+    @return: Result image URL and processing time
+    """
+    user_id = token_payload.get("sub")
+    logger.info(f"Try-on request received for product {try_on_data.product_id} from user {user_id}")
+    
+    # Check cache first
+    cache_key = f"try_on:{try_on_data.product_id}:{try_on_data.user_image_url}"
+    cached_result = redis_client.get(cache_key)
+    
+    if cached_result:
+        # Return cached result
+        logger.info(f"Cache hit for {cache_key}")
+        return TryOnResult(
+            result_image_url=cached_result,
+            processing_time_ms=0.0  # Cached result
+        )
+    
+    # Get product details from Supabase
+    supabase = get_supabase_client()
+    
+    # Fetch product from Supabase
+    start_time = time.time()
+    
+    try:
+        response = supabase.table("products").select("*").eq("id", try_on_data.product_id).execute()
+        
+        if not response.data:
+            logger.warning(f"Product not found: {try_on_data.product_id}")
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        product = response.data[0]
+        
+        # Simulate AI processing (would connect to SageMaker in production)
+        time.sleep(1)  # Simulate processing time
+        
+        # Generate result URL (would be from Cloudinary in production)
+        result_url = f"https://example.com/try-on-results/{try_on_data.product_id}.jpg"
+        
+        # Calculate processing time
+        processing_time = (time.time() - start_time) * 1000
+        
+        # Cache the result
+        redis_client.set(cache_key, result_url, ex=3600)  # Cache for 1 hour
+        
+        # Log try-on event in Supabase
+        supabase.table("try_on_logs").insert({
+            "product_id": try_on_data.product_id,
+            "user_id": user_id,
+            "result_url": result_url,
+            "processing_time_ms": processing_time,
+            "created_at": "now()"
+        }).execute()
+        
+        logger.info(f"Try-on completed for product {try_on_data.product_id} in {processing_time:.2f}ms")
+        
+        return TryOnResult(
+            result_image_url=result_url,
+            processing_time_ms=processing_time
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error during try-on process: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Try-on processing error: {str(e)}")
 
 # Run with: uvicorn main:app --reload
 if __name__ == "__main__":
     import uvicorn
     logger.info("Starting E-Commerce AI Backend")
-    port = int(os.getenv("PORT", 8001))  # Use environment variable or default to 8001
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

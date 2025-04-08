@@ -1,12 +1,43 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
+from enum import Enum
 
 """
 Product database models for the e-commerce store
 These models are designed to support the ProductCard component
 and provide all necessary fields for the frontend display
 """
+
+class Category(BaseModel):
+    """Model for product categories"""
+    id: str = Field(..., description="Unique category ID")
+    name: str = Field(..., description="Category name")
+    description: Optional[str] = Field(None, description="Category description")
+    image: Optional[str] = Field(None, description="Category image URL")
+    parent_id: Optional[str] = Field(None, description="Parent category ID")
+    is_active: bool = Field(True, description="Whether category is active")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
+
+class AttributeType(str, Enum):
+    """Enum for attribute types"""
+    TEXT = "text"
+    NUMBER = "number"
+    SELECT = "select"
+    MULTISELECT = "multiselect"
+    BOOLEAN = "boolean"
+
+class Attribute(BaseModel):
+    """Model for product attributes"""
+    id: str = Field(..., description="Unique attribute ID")
+    name: str = Field(..., description="Attribute name")
+    type: AttributeType = Field(..., description="Attribute type")
+    values: Optional[List[str]] = Field(None, description="Available values for select/multiselect")
+    is_required: bool = Field(False, description="Whether attribute is required")
+    is_filterable: bool = Field(True, description="Whether attribute is filterable")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
 
 class ProductBase(BaseModel):
     """Base product model with common fields"""

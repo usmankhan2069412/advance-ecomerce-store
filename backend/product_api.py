@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, status, Query
 from typing import List, Optional, Dict, Any
 import logging
 import time
-from models import ProductCreate, ProductResponse, ProductSustainability, SustainabilityMetric
+from models import ProductCreate, ProductResponse, ProductSustainability, SustainabilityMetric, Category, Attribute
 from utils import verify_token, get_supabase_client, security
 
 __all__ = ['router']
@@ -10,8 +10,47 @@ __all__ = ['router']
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Initialize router
+# Initialize routers
 router = APIRouter(prefix="/api/products", tags=["products"])
+category_router = APIRouter(prefix="/api/categories", tags=["categories"])
+attribute_router = APIRouter(prefix="/api/attributes", tags=["attributes"])
+
+# Category endpoints
+@category_router.get("/", response_model=List[Category])
+async def get_categories(token_payload: Dict = Depends(verify_token)):
+    """
+    Get all product categories
+    
+    @param token_payload: Authenticated user information
+    @return: List of categories
+    """
+    supabase = get_supabase_client()
+    try:
+        response = supabase.table("categories").select("*").execute()
+        return response.data
+    except Exception as e:
+        logger.error(f"Error fetching categories: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error fetching categories: {str(e)}")
+
+@category_router.post("/", response_model=Category, status_code=status.HTTP_201_CREATED)
+async def create_category(category: Category, token_payload: Dict = Depends(verify_token)):
+    """
+    Create a new category (admin only)
+    
+    @param category: Category data
+    @param token_payload: Authenticated user information
+    @return: Created category
+    """
+    if token_payload.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can create categories")
+    
+    supabase = get_supabase_client()
+    try:
+        response = supabase.table("categories").insert(category.dict()).execute()
+        return response.data[0]
+    except Exception as e:
+        logger.error(f"Error creating category: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error creating category: {str(e)}")
 
 
 @router.get("/", response_model=List[ProductResponse])
