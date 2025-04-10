@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "tempo-devtools": "^2.0.99"
+  },
+  "scripts": {
+    "dev": "cd frontend && npx next dev"
+  }
+}
