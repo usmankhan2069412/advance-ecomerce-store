@@ -107,11 +107,11 @@ const ProductCard = ({
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
 
-  // Handle adding to bag with size and color
+  // Handle adding to bag (size and color selection moved to product detail page)
   const handleAddToBag = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onAddToBag(id, selectedSize, selectedColor);
+    onAddToBag(id);
     trackAddToCart(id, name, price);
   };
 
@@ -312,6 +312,8 @@ const ProductCard = ({
                     <Button
                       className="flex-1"
                       onClick={(e) => {
+                        // In the quick view dialog, we still use size and color
+                        // This will need to be handled by the parent component
                         onAddToBag(id, selectedSize, selectedColor);
                         trackAddToCart(id, name, price);
                         setIsDialogOpen(false);
@@ -346,26 +348,7 @@ const ProductCard = ({
         {/* Description */}
         <p className="text-gray-600 text-sm line-clamp-2 mb-2">{description}</p>
 
-        {/* Size selection (compact version) */}
-        {sizes && sizes.length > 0 && (
-          <div className="mb-3">
-            <div className="flex flex-wrap gap-1">
-              {sizes.map((size) => (
-                <button
-                  key={size}
-                  className={`px-2 py-0.5 border text-xs rounded ${selectedSize === size ? 'border-black bg-black text-white' : 'border-gray-300'}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setSelectedSize(size);
-                  }}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Size selection removed from product card - only shown on product detail page */}
       </CardContent>
       <CardFooter className="flex justify-between items-center pt-0">
         <div>
@@ -384,7 +367,6 @@ const ProductCard = ({
           variant="outline"
           className="rounded-full"
           onClick={handleAddToBag}
-          disabled={sizes.length > 0 && !selectedSize}
         >
           <ShoppingBag className="h-4 w-4 mr-2" />
           Add to Bag

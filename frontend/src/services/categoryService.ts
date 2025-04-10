@@ -1,9 +1,39 @@
 import supabase from '@/lib/supabase';
 
-/**
- * Category service for Supabase database operations
- */
-export const categoryService = {
+class CategoryService {
+  private static instance: CategoryService;
+  private static initializationPromise: Promise<CategoryService>;
+
+  private constructor() {}
+
+  public static async getInstance(): Promise<CategoryService> {
+    if (this.instance) {
+      return this.instance;
+    }
+
+    if (!this.initializationPromise) {
+      this.initializationPromise = this.initialize();
+    }
+
+    try {
+      this.instance = await this.initializationPromise;
+      return this.instance;
+    } catch (error) {
+      console.error('Failed to initialize CategoryService:', error);
+      throw new Error('Failed to initialize CategoryService');
+    }
+  }
+
+  private static async initialize(): Promise<CategoryService> {
+    // Wait for Supabase client to be initialized
+    await supabase;
+    
+    const service = new CategoryService();
+    return service;
+  }
+
+  // Category service for Supabase database operations
+public = {
   /**
    * Get all categories
    */
@@ -47,10 +77,10 @@ export const categoryService = {
       const updatedCategories = JSON.parse(localStorage.getItem('updatedCategories') || '{}');
 
       // Filter out deleted categories from Supabase data
-      const filteredData = data.filter(cat => !deletedCategories.includes(cat.id));
+      const filteredData = data.filter((cat: { id: string }) => !deletedCategories.includes(cat.id));
 
       // Apply any updates to Supabase categories
-      const updatedSupabaseData = filteredData.map(cat => {
+      const updatedSupabaseData = filteredData.map((cat: { id: string }) => {
         if (updatedCategories[cat.id]) {
           return { ...cat, ...updatedCategories[cat.id] };
         }
@@ -282,4 +312,7 @@ export const categoryService = {
       }
     }
   }
+}
 };
+
+export default CategoryService;

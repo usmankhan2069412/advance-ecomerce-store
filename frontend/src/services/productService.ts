@@ -1,4 +1,16 @@
-import supabase from '../lib/supabase';
+import  supabase  from './supabase';
+import localStorageDB from '@/lib/localStorageDB';
+
+// Validate Supabase connection
+let supabaseInitialized = false;
+
+// Check if Supabase client is properly initialized
+if (supabase && typeof supabase.from === 'function') {
+  supabaseInitialized = true;
+  console.log('Supabase client validated in productService');
+} else {
+  console.warn('Supabase client not properly initialized in productService');
+}
 
 /**
  * Product service for Supabase database operations
@@ -11,6 +23,12 @@ export const productService = {
     try {
       // First try to get products from Supabase
       try {
+        // Verify Supabase client is properly initialized
+        if (!supabase || typeof supabase.from !== 'function') {
+          console.warn('Supabase client not properly initialized in getProducts');
+          throw new Error('Supabase client not properly initialized');
+        }
+        
         const { data, error } = await supabase
           .from('products')
           .select('*')
@@ -24,7 +42,7 @@ export const productService = {
           const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
 
           // Create a map of existing IDs to avoid duplicates
-          const existingIds = new Set(data.map(p => p.id));
+          const existingIds = new Set(data.map((p: { id: string }) => p.id));
 
           // Filter local products to only include those not in Supabase
           const uniqueLocalProducts = localProducts.filter((p: any) => !existingIds.has(p.id));
@@ -58,6 +76,12 @@ export const productService = {
     try {
       // Try to get from Supabase first
       try {
+        // Verify Supabase client is properly initialized
+        if (!supabase || typeof supabase.from !== 'function') {
+          console.warn(`Supabase client not properly initialized when fetching product ${id}`);
+          throw new Error('Supabase client not properly initialized');
+        }
+        
         const { data, error } = await supabase
           .from('products')
           .select('*')
@@ -108,72 +132,94 @@ export const productService = {
         ...product,
         image: product.image ? (typeof product.image === 'string' ? product.image.substring(0, 30) + '...' : 'Image object') : 'No image'
       });
-
-      // Ensure we have the correct field names for Supabase
       const productData = {
         ...product,
-        // Make sure we have an image field
         image: product.image || (product.images && product.images.length > 0 ? product.images[0] : 'https://placehold.co/600x400?text=No+Image'),
-        // Convert camelCase to snake_case for Supabase
         is_new: product.isNew || product.is_new || true,
         sustainability_score: product.sustainabilityScore || product.sustainability_score || 3,
       };
 
-      // If the image is a data URL (from file upload), store it as is
-      // In a production app, you would upload this to a storage service
+      if (!productData.name || !productData.price || !productData.category) {
+        throw new Error('Product name, price and category are required fields');
+      }
 
-      const { data, error } = await supabase
-        .from('products')
-        .insert([productData])
-        .select();
+      if (isNaN(productData.price) || productData.price <= 0) {
+        throw new Error('Price must be a positive number');
+      }
 
-      let createdProduct: any;
+      const cleanProductData = { ...productData };
+      Object.keys(cleanProductData).forEach(key => {
+        if (cleanProductData[key] === undefined) {
+          delete cleanProductData[key];
+        }
+      });
 
-      if (error) {
-        console.error('Error creating product in Supabase:', error);
-        // Fall back to localStorage if Supabase fails
-        createdProduct = {
-          ...productData,
-          id: `prod_${Math.random().toString(36).substring(2, 10)}`,
-          created_at: new Date().toISOString(),
-        };
+      // Validate Supabase connection with a proper count query
+      try {
+        const { data, error: connectionTestError } = await supabase
+          .from('pg_tables')
+          .select('*')
+          .eq('schemaname', 'public')
+          .eq('tablename', 'products')
+          .single();
+        const tableExists = !connectionTestError && data;
 
-        // Save to localStorage
-        const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
-        localStorage.setItem('products', JSON.stringify([...existingProducts, createdProduct]));
-
-        console.log('Product saved to localStorage as fallback');
-      } else if (!data || data.length === 0) {
-        throw new Error('No product data returned after creation');
-      } else {
-        createdProduct = data[0];
-        console.log('Product created in Supabase:', createdProduct);
-
-        // Also save to localStorage to ensure it's immediately available
-        const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
-        // Check if product already exists in localStorage
-        const existingIndex = existingProducts.findIndex((p: any) => p.id === createdProduct.id);
-
-        if (existingIndex >= 0) {
-          // Update existing product
-          existingProducts[existingIndex] = createdProduct;
-        } else {
-          // Add new product
-          existingProducts.push(createdProduct);
+        if (!tableExists) {
+          console.warn('Products table does not exist in Supabase');
+          throw new Error('Products table not found - run database migrations');
         }
 
-        localStorage.setItem('products', JSON.stringify(existingProducts));
+        if (connectionTestError) {
+          console.warn('Supabase connection test failed:', connectionTestError);
+          throw new Error(`Supabase connection failed: ${connectionTestError.message}`);
+        }
+
+        console.log('Supabase connection validated - products table exists');
+      } catch (connectionError) {
+        console.warn('Supabase connection validation failed:', connectionError);
+        throw new Error('Supabase connection validation failed - check network and permissions');
       }
 
-      // Dispatch a custom event to notify other components that a product was created
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('product-created', { detail: createdProduct }));
-      }
+      // Insert product with proper typing
+      try {
+        // Generate proper UUID for product
+        if (!cleanProductData.id) {
+          cleanProductData.id = crypto.randomUUID(); // Ensure browser supports crypto
+        }
 
-      return createdProduct;
+        // Insert with proper typing
+        const { data, error } = await supabase
+          .from('products')
+          .insert([cleanProductData])
+          .select('*');
+
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error('No data returned from Supabase');
+
+        const createdProduct = data[0];
+        console.log('Product created in Supabase:', createdProduct);
+
+        // Sync with localStorage
+        const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
+        localStorage.setItem('products', JSON.stringify([...localProducts, createdProduct]));
+
+        return createdProduct;
+      } catch (insertError) {
+        console.error('Supabase insert failed:', insertError);
+        
+        // Handle specific error codes
+        if ((insertError as { code?: string }).code === '23505') {
+          throw new Error('Product with this ID already exists');
+        }
+        
+        // Fallback to localStorage
+        console.log('Falling back to localStorage...');
+        const { data } = localStorageDB.insert('products', cleanProductData);
+        return data;
+      }
     } catch (error: any) {
       console.error('Error in createProduct:', error);
-      throw new Error(error.message || 'Failed to create product');
+      throw new Error(`Failed to create product: ${error.message}`);
     }
   },
 
@@ -184,6 +230,12 @@ export const productService = {
     try {
       // Try to update in Supabase first
       try {
+        // Verify Supabase client is properly initialized
+        if (!supabase || typeof supabase.from !== 'function') {
+          console.warn(`Supabase client not properly initialized when updating product ${id}`);
+          throw new Error('Supabase client not properly initialized');
+        }
+        
         const { data, error } = await supabase
           .from('products')
           .update(updates)
@@ -247,6 +299,12 @@ export const productService = {
 
       // Try to delete from Supabase first
       try {
+        // Verify Supabase client is properly initialized
+        if (!supabase || typeof supabase.from !== 'function') {
+          console.warn(`Supabase client not properly initialized when deleting product ${id}`);
+          throw new Error('Supabase client not properly initialized');
+        }
+        
         const { error } = await supabase
           .from('products')
           .delete()

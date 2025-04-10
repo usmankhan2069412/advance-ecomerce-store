@@ -143,20 +143,7 @@ const ProductCard = ({
             NEW
           </div>
         )}
-        <div className="absolute top-3 right-3">
-          <Button
-            variant="outline"
-            size="md"
-            className="rounded-full bg-white/80 backdrop-blur-sm hover:bg-white"
-            onClick={handleFavoriteClick}
-          >
-            <Heart
-              className={`h-5 w-5 ${
-                favorite ? "fill-red-500 text-red-500" : "text-gray-600"
-              }`}
-            />
-          </Button>
-        </div>
+        {/* Favorite button removed from product card */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>

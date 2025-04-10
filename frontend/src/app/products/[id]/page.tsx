@@ -12,8 +12,8 @@ import { ARButton } from "@/components/ui/ARButton";
 import SustainabilityIndicator from "@/components/SustainabilityIndicator";
 import VirtualTryOn from "@/components/ai/VirtualTryOn";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Star, ShoppingBag, Heart, Share2, Maximize, Info } from "lucide-react";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { Star, ShoppingBag, Share2, Maximize, Info } from "lucide-react";
 import { trackProductView, trackAddToCart } from "@/lib/analytics";
 
 /**
@@ -23,7 +23,7 @@ import { trackProductView, trackAddToCart } from "@/lib/analytics";
 export default function ProductDetailPage() {
   const params = useParams();
   const productId = params.id as string;
-  
+
   // Product state
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -31,10 +31,10 @@ export default function ProductDetailPage() {
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  // Removed isFavorite state since we removed the favorite button
   const [showTryOn, setShowTryOn] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
-  
+
   // Mock product data - in a real app, this would come from an API
   useEffect(() => {
     // Simulate API call
@@ -73,7 +73,7 @@ export default function ProductDetailPage() {
         modelSize: "Model wears size S",
         modelHeight: "Model is 5'10\" (178 cm)"
       };
-      
+
       // Mock related products
       const mockRelatedProducts = [
         {
@@ -109,18 +109,18 @@ export default function ProductDetailPage() {
           reviewCount: 19
         }
       ];
-      
+
       setProduct(mockProduct);
       setRelatedProducts(mockRelatedProducts);
       setSelectedColor(mockProduct.colors.find((c: any) => c.inStock)?.name || "");
       setSelectedSize(mockProduct.sizes.find((s: any) => s.inStock)?.name || "");
       setLoading(false);
-      
+
       // Track product view
       trackProductView(productId, mockProduct.name, mockProduct.price);
     }, 800);
   }, [productId]);
-  
+
   // Handle add to cart
   const handleAddToCart = () => {
     if (!selectedSize) {
@@ -131,7 +131,7 @@ export default function ProductDetailPage() {
       alert("Please select a color");
       return;
     }
-    
+
     // In a real app, this would add the product to the cart
     console.log("Adding to cart:", {
       productId,
@@ -141,17 +141,13 @@ export default function ProductDetailPage() {
       color: selectedColor,
       quantity
     });
-    
+
     trackAddToCart(productId, product.name, product.price);
     alert(`${product.name} added to your bag!`);
   };
-  
-  // Handle favorite toggle
-  const handleFavoriteToggle = () => {
-    setIsFavorite(!isFavorite);
-    // In a real app, this would save to user's favorites
-  };
-  
+
+  // No longer needed since we removed the favorite button
+
   // Loading state
   if (loading) {
     return (
@@ -174,7 +170,7 @@ export default function ProductDetailPage() {
       </div>
     );
   }
-  
+
   if (!product) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -188,7 +184,7 @@ export default function ProductDetailPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Main Product Section */}
@@ -197,20 +193,20 @@ export default function ProductDetailPage() {
         <div className="space-y-4">
           {/* Main Image */}
           <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
-            <Image 
-              src={product.images[activeImageIndex]} 
+            <Image
+              src={product.images[activeImageIndex]}
               alt={product.name}
               fill
               className="object-cover"
               priority
             />
-            
+
             {/* Zoom button */}
             <Dialog>
               <DialogTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="md" 
+                <Button
+                  variant="outline"
+                  size="md"
                   className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm hover:bg-white"
                 >
                   <Maximize className="h-4 w-4" />
@@ -218,8 +214,8 @@ export default function ProductDetailPage() {
               </DialogTrigger>
               <DialogContent className="max-w-4xl">
                 <div className="relative aspect-square w-full">
-                  <Image 
-                    src={product.images[activeImageIndex]} 
+                  <Image
+                    src={product.images[activeImageIndex]}
                     alt={product.name}
                     fill
                     className="object-contain"
@@ -227,42 +223,44 @@ export default function ProductDetailPage() {
                 </div>
               </DialogContent>
             </Dialog>
-            
+
             {/* AI Try-On button */}
-            <Button 
-              variant="outline" 
-              size="md" 
+            <Button
+              variant="outline"
+              size="md"
               className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm hover:bg-white"
               onClick={() => setShowTryOn(true)}
             >
               <Info className="h-4 w-4" />
             </Button>
           </div>
-          
+
           {/* Thumbnail Gallery */}
-          <div className="flex space-x-2 overflow-x-auto pb-2">
+          <div className="grid grid-cols-5 gap-2 pb-2">
             {product.images.map((image: string, index: number) => (
               <button
                 key={index}
-                className={`relative w-20 h-20 rounded-md overflow-hidden ${index === activeImageIndex ? 'ring-2 ring-primary' : 'ring-1 ring-gray-200'}`}
+                className={`relative aspect-square rounded-md overflow-hidden transition-all duration-200 ${index === activeImageIndex ? 'ring-2 ring-primary scale-105 z-10' : 'ring-1 ring-gray-200 hover:ring-gray-300'}`}
                 onClick={() => setActiveImageIndex(index)}
+                aria-label={`View image ${index + 1}`}
               >
-                <Image 
-                  src={image} 
+                <Image
+                  src={image}
                   alt={`${product.name} - View ${index + 1}`}
                   fill
+                  sizes="(max-width: 768px) 20vw, 10vw"
                   className="object-cover"
                 />
               </button>
             ))}
           </div>
-          
+
           {/* 3D View */}
           <div className="aspect-square rounded-lg overflow-hidden bg-gray-50">
             <ProductView3D productId={productId} className="w-full h-full" />
           </div>
         </div>
-        
+
         {/* Product Information */}
         <div>
           {/* Product Name and Price */}
@@ -273,9 +271,9 @@ export default function ProductDetailPage() {
               <div className="flex items-center">
                 <div className="flex items-center mr-2">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <Star 
-                      key={i} 
-                      className={`h-4 w-4 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                    <Star
+                      key={i}
+                      className={`h-4 w-4 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
                     />
                   ))}
                 </div>
@@ -285,20 +283,20 @@ export default function ProductDetailPage() {
               </div>
             </div>
           </div>
-          
+
           {/* Product Description */}
           <div className="mb-6">
             <p className="text-gray-700">{product.description}</p>
           </div>
-          
+
           {/* Sustainability Score */}
           <div className="flex items-center mb-6">
-            <SustainabilityIndicator 
-              level={product.sustainabilityScore >= 4 ? "high" : product.sustainabilityScore >= 3 ? "medium" : "low"} 
-              size="md" 
+            <SustainabilityIndicator
+              level={product.sustainabilityScore >= 4 ? "high" : product.sustainabilityScore >= 3 ? "medium" : "low"}
+              size="md"
             />
           </div>
-          
+
           {/* Color Selection */}
           <div className="mb-6">
             <h3 className="text-sm font-medium mb-2">Color: {selectedColor}</h3>
@@ -307,7 +305,7 @@ export default function ProductDetailPage() {
                 <button
                   key={color.name}
                   className={`
-                    w-10 h-10 rounded-full relative 
+                    w-10 h-10 rounded-full relative
                     ${!color.inStock ? 'opacity-50 cursor-not-allowed' : ''}
                     ${selectedColor === color.name ? 'ring-2 ring-black ring-offset-2' : ''}
                   `}
@@ -325,7 +323,7 @@ export default function ProductDetailPage() {
               ))}
             </div>
           </div>
-          
+
           {/* Size Selection */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
@@ -404,12 +402,12 @@ export default function ProductDetailPage() {
               ))}
             </div>
           </div>
-          
+
           {/* Quantity */}
           <div className="mb-6">
             <h3 className="text-sm font-medium mb-2">Quantity</h3>
             <div className="flex items-center border border-gray-200 rounded-md w-32">
-              <button 
+              <button
                 className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-black"
                 onClick={() => quantity > 1 && setQuantity(quantity - 1)}
                 disabled={quantity <= 1}
@@ -417,7 +415,7 @@ export default function ProductDetailPage() {
                 -
               </button>
               <div className="flex-1 text-center">{quantity}</div>
-              <button 
+              <button
                 className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-black"
                 onClick={() => setQuantity(quantity + 1)}
               >
@@ -425,41 +423,33 @@ export default function ProductDetailPage() {
               </button>
             </div>
           </div>
-          
+
           {/* Add to Cart and Actions */}
           <div className="flex flex-col space-y-4 mb-8">
-            <Button 
-              size="lg" 
-              className="w-full" 
+            <Button
+              size="lg"
+              className="w-full"
               onClick={handleAddToCart}
             >
               <ShoppingBag className="h-5 w-5 mr-2" />
               Add to Bag
             </Button>
-            
+
             <div className="flex space-x-4">
-              <Button 
-                variant="outline" 
-                className="flex-1"
-                onClick={handleFavoriteToggle}
-              >
-                <Heart className={`h-5 w-5 mr-2 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
-                {isFavorite ? 'Saved' : 'Save'}
-              </Button>
-              
-              <ARButton 
+              <ARButton
                 productId={productId}
                 productName={product.name}
                 variant="outline"
                 className="flex-1"
               />
-              
-              <Button variant="outline" size="md">
-                <Share2 className="h-5 w-5" />
+
+              <Button variant="outline" size="md" className="flex-1">
+                <Share2 className="h-5 w-5 mr-2" />
+                Share
               </Button>
             </div>
           </div>
-          
+
           {/* Product Details Tabs */}
           <Tabs defaultValue="details" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
@@ -484,7 +474,7 @@ export default function ProductDetailPage() {
           </Tabs>
         </div>
       </div>
-      
+
       {/* AI Try-On Dialog */}
       <Dialog open={showTryOn} onOpenChange={setShowTryOn}>
         <DialogContent className="max-w-4xl">
@@ -492,80 +482,105 @@ export default function ProductDetailPage() {
           <VirtualTryOn productId={productId} productImage={product.images[0]} />
         </DialogContent>
       </Dialog>
-      
+
       {/* Related Products */}
       <div className="mb-16">
         <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
-        // Correct usage of carousel controls
-        <Carousel className="w-full">
-          <CarouselContent>
-            {relatedProducts.map((relatedProduct) => (
-              <CarouselItem key={relatedProduct.id} className="md:basis-1/3 lg:basis-1/4">
-                <Card className="h-full">
-                  <CardContent className="p-0">
-                    <Link href={`/products/${relatedProduct.id}`}>
-                      <div className="relative aspect-square overflow-hidden rounded-t-lg">
-                        <Image 
-                          src={relatedProduct.image} 
-                          alt={relatedProduct.name}
-                          fill
-                          className="object-cover transition-transform hover:scale-105"
-                        />
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-medium truncate">{relatedProduct.name}</h3>
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="font-semibold">${relatedProduct.price.toLocaleString()}</p>
-                          <div className="flex items-center">
-                            <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                            <span className="text-xs ml-1">{relatedProduct.rating}</span>
+        <div className="relative">
+          <Carousel className="w-full">
+            <CarouselContent>
+              {relatedProducts.map((relatedProduct) => (
+                <CarouselItem key={relatedProduct.id} className="md:basis-1/3 lg:basis-1/4">
+                  <Card className="h-full">
+                    <CardContent className="p-0">
+                      <Link href={`/products/${relatedProduct.id}`}>
+                        <div className="relative aspect-square overflow-hidden rounded-t-lg">
+                          <Image
+                            src={relatedProduct.image}
+                            alt={relatedProduct.name}
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
+                            className="object-cover transition-transform hover:scale-105"
+                          />
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-medium truncate">{relatedProduct.name}</h3>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="font-semibold">${relatedProduct.price.toLocaleString()}</p>
+                            <div className="flex items-center">
+                              <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                              <span className="text-xs ml-1">{relatedProduct.rating}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </Link>
-                  </CardContent>
-                </Card>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-         
-        </Carousel>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+
+            {/* Add navigation buttons */}
+            <div className="absolute -left-4 top-1/2 -translate-y-1/2">
+              <button
+                className="rounded-full bg-white p-2 shadow-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                onClick={() => document.querySelector('.carousel-prev')?.dispatchEvent(new Event('click'))}
+                aria-label="Previous slide"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                  <path d="m15 18-6-6 6-6"/>
+                </svg>
+              </button>
+            </div>
+            <div className="absolute -right-4 top-1/2 -translate-y-1/2">
+              <button
+                className="rounded-full bg-white p-2 shadow-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                onClick={() => document.querySelector('.carousel-next')?.dispatchEvent(new Event('click'))}
+                aria-label="Next slide"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                  <path d="m9 18 6-6-6-6"/>
+                </svg>
+              </button>
+            </div>
+          </Carousel>
+        </div>
       </div>
-      
+
       {/* Customer Reviews */}
       <div>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold">Customer Reviews</h2>
           <Button>Write a Review</Button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
             <div className="flex items-center mb-4">
               <div className="flex mr-4">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Star 
-                    key={i} 
-                    className={`h-6 w-6 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                  <Star
+                    key={i}
+                    className={`h-6 w-6 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
                   />
                 ))}
               </div>
               <span className="text-xl font-semibold">{product.rating} out of 5</span>
             </div>
-            
+
             <div className="space-y-2">
               {[5, 4, 3, 2, 1].map((rating) => {
                 // Calculate percentage (mock data)
-                const percent = rating === 5 ? 70 : 
-                               rating === 4 ? 20 : 
-                               rating === 3 ? 7 : 
+                const percent = rating === 5 ? 70 :
+                               rating === 4 ? 20 :
+                               rating === 3 ? 7 :
                                rating === 2 ? 2 : 1;
                 return (
                   <div key={rating} className="flex items-center">
                     <span className="w-12 text-sm">{rating} stars</span>
                     <div className="flex-1 h-2 mx-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-yellow-400" 
+                      <div
+                        className="h-full bg-yellow-400"
                         style={{ width: `${percent}%` }}
                       ></div>
                     </div>
@@ -575,7 +590,7 @@ export default function ProductDetailPage() {
               })}
             </div>
           </div>
-          
+
           <div className="space-y-6">
             {/* Mock reviews */}
             {[
@@ -612,9 +627,9 @@ export default function ProductDetailPage() {
                 <div className="flex items-center mb-2">
                   <div className="flex mr-2">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star 
-                        key={i} 
-                        className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
                       />
                     ))}
                   </div>
@@ -623,7 +638,7 @@ export default function ProductDetailPage() {
                 <p className="text-gray-700">{review.comment}</p>
               </div>
             ))}
-            
+
             <Button variant="outline" className="w-full">Load More Reviews</Button>
           </div>
         </div>

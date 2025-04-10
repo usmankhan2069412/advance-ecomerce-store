@@ -1,4 +1,0 @@
-2025-04-04 15:42:49,206 - __main__ - WARNING - Running in development mode with default values for: SUPABASE_KEY, REDIS_HOST, REDIS_PORT, JWT_SECRET
-2025-04-04 15:42:53,739 - __main__ - WARNING - Redis connection failed, using mock Redis for development: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
-2025-04-04 15:42:53,853 - __main__ - INFO - Starting E-Commerce AI Backend
-2025-04-04 15:46:33,844 - utils - WARNING - Authentication error: Signature verification failed

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Save, X, Upload, Plus, Trash } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { categoryService } from "@/services/categoryService";
+import CategoryService from "@/services/categoryService";
 
 /**
  * Product form interface
@@ -61,6 +61,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
       aiRecommendationReason: "",
     }
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [newTag, setNewTag] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -70,24 +71,14 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
   // Function to fetch categories
   const fetchCategories = async () => {
     try {
-      // The categoryService now handles errors internally and returns default categories
-      const data = await categoryService.getCategories();
+      const service = await getCategoryService();
+      const data = await service.public.getCategories();
       console.log('Fetched categories:', data);
-
-      if (data && data.length > 0) {
-        setCategories(data);
-      } else {
-        // If no categories returned, use default categories
-        const defaultCategories = categoryService.getDefaultCategories();
-        console.log('Using default categories:', defaultCategories);
-        setCategories(defaultCategories);
-      }
+      setCategories(data || []);
     } catch (error) {
-      // This should never happen now, but just in case
       console.error('Unexpected error fetching categories:', error);
-      const defaultCategories = categoryService.getDefaultCategories();
-      console.log('Using default categories due to error:', defaultCategories);
-      setCategories(defaultCategories);
+      setCategories([]);
+      toast.error('Failed to load categories. Please try again.');
     }
   };
 
@@ -269,6 +260,8 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
     if (validateForm()) {
       try {
@@ -283,22 +276,13 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
           images: compressImages(formData.images)
         };
 
-        // Get existing products from localStorage
-        const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
+        // Let the productService handle localStorage
+        // This prevents duplicate products from being created
 
+        // Show success message based on whether we're updating or creating
         if (initialData) {
-          // Update existing product
-          const updatedProducts = existingProducts.map((p: ProductFormData) =>
-            p.id === compressedFormData.id ? compressedFormData : p
-          );
-          const cleanedProducts = cleanupStorage(updatedProducts);
-          localStorage.setItem('products', JSON.stringify(cleanedProducts));
           toast.success('Product updated successfully!');
         } else {
-          // Add new product
-          const newProducts = [...existingProducts, compressedFormData];
-          const cleanedProducts = cleanupStorage(newProducts);
-          localStorage.setItem('products', JSON.stringify(cleanedProducts));
           toast.success('Product created successfully!');
         }
 
@@ -309,7 +293,11 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
         } else {
           toast.error('Failed to save product. Please try again.');
         }
+      } finally {
+        setIsSubmitting(false);
       }
+    } else {
+      setIsSubmitting(false);
     }
   };
 
@@ -445,10 +433,9 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                     <Select
                       value={formData.category}
                       onValueChange={(value) => setFormData({ ...formData, category: value })}
-                      className="flex-grow"
                     >
                     <SelectTrigger
-                      className={`w-full h-10 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.category ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'}`}
+                      className={`w-full h-10 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.category ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} flex-grow`}
                     >
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
@@ -613,9 +600,10 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
             <Button
               type="submit"
               className="flex items-center gap-2"
+              disabled={isSubmitting}
             >
               <Save className="h-4 w-4" />
-              {initialData ? "Update Product" : "Create Product"}
+              {isSubmitting ? 'Saving...' : (initialData ? "Update Product" : "Create Product")}
             </Button>
           </div>
         </form>
@@ -625,3 +613,8 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
 };
 
 export default ProductForm;
+
+// Add the initialization function
+const getCategoryService = async () => {
+  return await CategoryService.getInstance();
+};
