@@ -1,11 +1,11 @@
-
 "use client";
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { User, ShoppingBag, Menu } from "lucide-react";
+import { User, ShoppingBag, Menu, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "./ui/Button";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,15 +19,17 @@ interface HeaderProps {
 
 const Header = ({ transparent = false }: HeaderProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 0);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
   const navItems = [
     { label: "New Arrivals", href: "/new-arrivals" },
     { label: "Collections", href: "/collections" },
@@ -37,6 +39,12 @@ const Header = ({ transparent = false }: HeaderProps) => {
     { label: "AI Studio", href: "/ai-studio" },
   ];
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Implement search functionality here
+    console.log("Searching for:", searchValue);
+  };
+
   return (
     <header
       className={cn(
@@ -44,8 +52,8 @@ const Header = ({ transparent = false }: HeaderProps) => {
         transparent && !isScrolled
           ? "bg-transparent text-white"
           : isScrolled
-          ? "bg-black text-white shadow-sm"
-          : "bg-white text-black shadow-sm",
+            ? "bg-black text-white shadow-sm"
+            : "bg-white text-black shadow-sm",
       )}
     >
       <div className="flex items-center space-x-8">
@@ -66,13 +74,34 @@ const Header = ({ transparent = false }: HeaderProps) => {
         </nav>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-4">
+        <form
+          onSubmit={handleSearch}
+          className="relative hidden md:flex items-center"
+        >
+          <Input
+            type="text"
+            placeholder="Search..."
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            className="w-64 pr-8"
+          />
+          <Button
+            type="submit"
+            variant="ghost"
+            size="icon"
+            className="absolute right-0"
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        </form>
+
         <Button variant="ghost" size="sm">
           <User className="h-5 w-5" />
         </Button>
 
         <Button variant="ghost" size="sm" className="relative">
-          <span className="absolute -top-1 -right-0  text-white text-x rounded-full h-4 w-4 flex items-center justify-center">
+          <span className="absolute -top-1 -right-0 text-white text-xs bg-black rounded-full h-4 w-4 flex items-center justify-center">
             0
           </span>
           <ShoppingBag className="h-5 w-5" />
@@ -80,7 +109,7 @@ const Header = ({ transparent = false }: HeaderProps) => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="md">
+            <Button variant="ghost" size="sm">
               <Menu className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
@@ -90,7 +119,6 @@ const Header = ({ transparent = false }: HeaderProps) => {
                 <Link href={item.href}>{item.label}</Link>
               </DropdownMenuItem>
             ))}
-
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

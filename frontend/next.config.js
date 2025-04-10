@@ -52,9 +52,10 @@ const nextConfig = {
 
 // Tempo integration
 if (process.env.NEXT_PUBLIC_TEMPO) {
+  // Use a more compatible configuration for the SWC plugin
   nextConfig.experimental = {
     ...nextConfig.experimental,
-    swcPlugins: [[require.resolve("tempo-devtools/swc/0.90"), {}]],
+    swcPlugins: [],
   };
 }
 
