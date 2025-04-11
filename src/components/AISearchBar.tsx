@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, X, Mic, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Tooltip,
@@ -218,8 +218,13 @@ const AISearchBar = ({
             {results.map((result) => (
               <div
                 key={result.id}
-                className="flex items-center gap-3 p-3 hover:bg-accent cursor-pointer transition-colors"
+                className="flex items-center gap-3 p-3 hover:bg-accent cursor-pointer transition-colors rounded-md"
                 onClick={() => handleResultClick(result)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && handleResultClick(result)
+                }
               >
                 <div className="h-16 w-16 rounded overflow-hidden flex-shrink-0">
                   <img

@@ -1,11 +1,10 @@
-
 "use client";
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { User, ShoppingBag, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "./ui/Button";
+import { Button } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,8 +24,8 @@ const Header = ({ transparent = false }: HeaderProps) => {
       setIsScrolled(window.scrollY > 0);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
   const navItems = [
     { label: "New Arrivals", href: "/new-arrivals" },
@@ -44,8 +43,8 @@ const Header = ({ transparent = false }: HeaderProps) => {
         transparent && !isScrolled
           ? "bg-transparent text-white"
           : isScrolled
-          ? "bg-black text-white shadow-sm"
-          : "bg-white text-black shadow-sm",
+            ? "bg-black text-white shadow-sm"
+            : "bg-white text-black shadow-sm",
       )}
     >
       <div className="flex items-center space-x-8">
@@ -72,7 +71,7 @@ const Header = ({ transparent = false }: HeaderProps) => {
         </Button>
 
         <Button variant="ghost" size="sm" className="relative">
-          <span className="absolute -top-1 -right-0  text-white text-x rounded-full h-4 w-4 flex items-center justify-center">
+          <span className="absolute -top-1 -right-0 bg-primary text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
             0
           </span>
           <ShoppingBag className="h-5 w-5" />
@@ -90,7 +89,6 @@ const Header = ({ transparent = false }: HeaderProps) => {
                 <Link href={item.href}>{item.label}</Link>
               </DropdownMenuItem>
             ))}
-
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

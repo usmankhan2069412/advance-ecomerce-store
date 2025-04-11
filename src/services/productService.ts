@@ -1,15 +1,15 @@
-import  supabase  from './supabase';
-import localStorageDB from '@/lib/localStorageDB';
+import supabase from "@/lib/supabase";
+import localStorageDB from "@/lib/localStorageDB";
 
 // Validate Supabase connection
 let supabaseInitialized = false;
 
 // Check if Supabase client is properly initialized
-if (supabase && typeof supabase.from === 'function') {
+if (supabase && typeof supabase.from === "function") {
   supabaseInitialized = true;
-  console.log('Supabase client validated in productService');
+  console.log("Supabase client validated in productService");
 } else {
-  console.warn('Supabase client not properly initialized in productService');
+  console.warn("Supabase client not properly initialized in productService");
 }
 
 /**
@@ -24,46 +24,56 @@ export const productService = {
       // First try to get products from Supabase
       try {
         // Verify Supabase client is properly initialized
-        if (!supabase || typeof supabase.from !== 'function') {
-          console.warn('Supabase client not properly initialized in getProducts');
-          throw new Error('Supabase client not properly initialized');
+        if (!supabase || typeof supabase.from !== "function") {
+          console.warn(
+            "Supabase client not properly initialized in getProducts",
+          );
+          throw new Error("Supabase client not properly initialized");
         }
-        
+
         const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .order('created_at', { ascending: false });
+          .from("products")
+          .select("*")
+          .order("created_at", { ascending: false });
 
         if (error) {
-          console.warn('Error fetching products from Supabase:', error);
+          console.warn("Error fetching products from Supabase:", error);
           // Don't throw, just continue to localStorage fallback
         } else {
           // If we have data from Supabase, merge with localStorage data
-          const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
+          const localProducts = JSON.parse(
+            localStorage.getItem("products") || "[]",
+          );
 
           // Create a map of existing IDs to avoid duplicates
           const existingIds = new Set(data.map((p: { id: string }) => p.id));
 
           // Filter local products to only include those not in Supabase
-          const uniqueLocalProducts = localProducts.filter((p: any) => !existingIds.has(p.id));
+          const uniqueLocalProducts = localProducts.filter(
+            (p: any) => !existingIds.has(p.id),
+          );
 
           // Combine both sources
           const allProducts = [...data, ...uniqueLocalProducts];
-          console.log(`Retrieved ${allProducts.length} products (${data.length} from Supabase, ${uniqueLocalProducts.length} from localStorage)`);
+          console.log(
+            `Retrieved ${allProducts.length} products (${data.length} from Supabase, ${uniqueLocalProducts.length} from localStorage)`,
+          );
 
           return allProducts;
         }
       } catch (supabaseError) {
-        console.warn('Supabase connection error:', supabaseError);
+        console.warn("Supabase connection error:", supabaseError);
         // Continue to localStorage fallback
       }
 
       // If we get here, Supabase failed, so use localStorage
-      const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-      console.log('Using localStorage products:', localProducts.length);
+      const localProducts = JSON.parse(
+        localStorage.getItem("products") || "[]",
+      );
+      console.log("Using localStorage products:", localProducts.length);
       return localProducts;
     } catch (error: any) {
-      console.error('Unexpected error in getProducts:', error);
+      console.error("Unexpected error in getProducts:", error);
       // Return empty array as last resort
       return [];
     }
@@ -77,15 +87,17 @@ export const productService = {
       // Try to get from Supabase first
       try {
         // Verify Supabase client is properly initialized
-        if (!supabase || typeof supabase.from !== 'function') {
-          console.warn(`Supabase client not properly initialized when fetching product ${id}`);
-          throw new Error('Supabase client not properly initialized');
+        if (!supabase || typeof supabase.from !== "function") {
+          console.warn(
+            `Supabase client not properly initialized when fetching product ${id}`,
+          );
+          throw new Error("Supabase client not properly initialized");
         }
-        
+
         const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', id)
+          .from("products")
+          .select("*")
+          .eq("id", id)
           .single();
 
         if (!error && data) {
@@ -97,13 +109,18 @@ export const productService = {
           console.warn(`Error fetching product ${id} from Supabase:`, error);
         }
       } catch (supabaseError) {
-        console.warn(`Supabase connection error when fetching product ${id}:`, supabaseError);
+        console.warn(
+          `Supabase connection error when fetching product ${id}:`,
+          supabaseError,
+        );
       }
 
       // Check localStorage regardless of whether Supabase succeeded
       try {
         console.log(`Checking localStorage for product ${id}`);
-        const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
+        const localProducts = JSON.parse(
+          localStorage.getItem("products") || "[]",
+        );
         const localProduct = localProducts.find((p: any) => p.id === id);
 
         if (localProduct) {
@@ -111,7 +128,10 @@ export const productService = {
           return localProduct;
         }
       } catch (localStorageError) {
-        console.warn(`Error accessing localStorage for product ${id}:`, localStorageError);
+        console.warn(
+          `Error accessing localStorage for product ${id}:`,
+          localStorageError,
+        );
       }
 
       // If we got here, the product wasn't found in either place
@@ -128,27 +148,36 @@ export const productService = {
    */
   async createProduct(product: any) {
     try {
-      console.log('Creating product in Supabase:', {
+      console.log("Creating product in Supabase:", {
         ...product,
-        image: product.image ? (typeof product.image === 'string' ? product.image.substring(0, 30) + '...' : 'Image object') : 'No image'
+        image: product.image
+          ? typeof product.image === "string"
+            ? product.image.substring(0, 30) + "..."
+            : "Image object"
+          : "No image",
       });
       const productData = {
         ...product,
-        image: product.image || (product.images && product.images.length > 0 ? product.images[0] : 'https://placehold.co/600x400?text=No+Image'),
+        image:
+          product.image ||
+          (product.images && product.images.length > 0
+            ? product.images[0]
+            : "https://placehold.co/600x400?text=No+Image"),
         is_new: product.isNew || product.is_new || true,
-        sustainability_score: product.sustainabilityScore || product.sustainability_score || 3,
+        sustainability_score:
+          product.sustainabilityScore || product.sustainability_score || 3,
       };
 
       if (!productData.name || !productData.price || !productData.category) {
-        throw new Error('Product name, price and category are required fields');
+        throw new Error("Product name, price and category are required fields");
       }
 
       if (isNaN(productData.price) || productData.price <= 0) {
-        throw new Error('Price must be a positive number');
+        throw new Error("Price must be a positive number");
       }
 
       const cleanProductData = { ...productData };
-      Object.keys(cleanProductData).forEach(key => {
+      Object.keys(cleanProductData).forEach((key) => {
         if (cleanProductData[key] === undefined) {
           delete cleanProductData[key];
         }
@@ -157,27 +186,31 @@ export const productService = {
       // Validate Supabase connection with a proper count query
       try {
         const { data, error: connectionTestError } = await supabase
-          .from('pg_tables')
-          .select('*')
-          .eq('schemaname', 'public')
-          .eq('tablename', 'products')
+          .from("pg_tables")
+          .select("*")
+          .eq("schemaname", "public")
+          .eq("tablename", "products")
           .single();
         const tableExists = !connectionTestError && data;
 
         if (!tableExists) {
-          console.warn('Products table does not exist in Supabase');
-          throw new Error('Products table not found - run database migrations');
+          console.warn("Products table does not exist in Supabase");
+          throw new Error("Products table not found - run database migrations");
         }
 
         if (connectionTestError) {
-          console.warn('Supabase connection test failed:', connectionTestError);
-          throw new Error(`Supabase connection failed: ${connectionTestError.message}`);
+          console.warn("Supabase connection test failed:", connectionTestError);
+          throw new Error(
+            `Supabase connection failed: ${connectionTestError.message}`,
+          );
         }
 
-        console.log('Supabase connection validated - products table exists');
+        console.log("Supabase connection validated - products table exists");
       } catch (connectionError) {
-        console.warn('Supabase connection validation failed:', connectionError);
-        throw new Error('Supabase connection validation failed - check network and permissions');
+        console.warn("Supabase connection validation failed:", connectionError);
+        throw new Error(
+          "Supabase connection validation failed - check network and permissions",
+        );
       }
 
       // Insert product with proper typing
@@ -189,36 +222,42 @@ export const productService = {
 
         // Insert with proper typing
         const { data, error } = await supabase
-          .from('products')
+          .from("products")
           .insert([cleanProductData])
-          .select('*');
+          .select("*");
 
         if (error) throw error;
-        if (!data || data.length === 0) throw new Error('No data returned from Supabase');
+        if (!data || data.length === 0)
+          throw new Error("No data returned from Supabase");
 
         const createdProduct = data[0];
-        console.log('Product created in Supabase:', createdProduct);
+        console.log("Product created in Supabase:", createdProduct);
 
         // Sync with localStorage
-        const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-        localStorage.setItem('products', JSON.stringify([...localProducts, createdProduct]));
+        const localProducts = JSON.parse(
+          localStorage.getItem("products") || "[]",
+        );
+        localStorage.setItem(
+          "products",
+          JSON.stringify([...localProducts, createdProduct]),
+        );
 
         return createdProduct;
       } catch (insertError) {
-        console.error('Supabase insert failed:', insertError);
-        
+        console.error("Supabase insert failed:", insertError);
+
         // Handle specific error codes
-        if ((insertError as { code?: string }).code === '23505') {
-          throw new Error('Product with this ID already exists');
+        if ((insertError as { code?: string }).code === "23505") {
+          throw new Error("Product with this ID already exists");
         }
-        
+
         // Fallback to localStorage
-        console.log('Falling back to localStorage...');
-        const { data } = localStorageDB.insert('products', cleanProductData);
+        console.log("Falling back to localStorage...");
+        const { data } = localStorageDB.insert("products", cleanProductData);
         return data;
       }
     } catch (error: any) {
-      console.error('Error in createProduct:', error);
+      console.error("Error in createProduct:", error);
       throw new Error(`Failed to create product: ${error.message}`);
     }
   },
@@ -231,29 +270,41 @@ export const productService = {
       // Try to update in Supabase first
       try {
         // Verify Supabase client is properly initialized
-        if (!supabase || typeof supabase.from !== 'function') {
-          console.warn(`Supabase client not properly initialized when updating product ${id}`);
-          throw new Error('Supabase client not properly initialized');
+        if (!supabase || typeof supabase.from !== "function") {
+          console.warn(
+            `Supabase client not properly initialized when updating product ${id}`,
+          );
+          throw new Error("Supabase client not properly initialized");
         }
-        
+
         const { data, error } = await supabase
-          .from('products')
+          .from("products")
           .update(updates)
-          .eq('id', id)
+          .eq("id", id)
           .select();
 
         if (!error && data && data.length > 0) {
           // Also update in localStorage to keep them in sync
           try {
-            const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-            const productIndex = localProducts.findIndex((p: any) => p.id === id);
+            const localProducts = JSON.parse(
+              localStorage.getItem("products") || "[]",
+            );
+            const productIndex = localProducts.findIndex(
+              (p: any) => p.id === id,
+            );
 
             if (productIndex >= 0) {
-              localProducts[productIndex] = { ...localProducts[productIndex], ...updates };
-              localStorage.setItem('products', JSON.stringify(localProducts));
+              localProducts[productIndex] = {
+                ...localProducts[productIndex],
+                ...updates,
+              };
+              localStorage.setItem("products", JSON.stringify(localProducts));
             }
           } catch (localStorageError) {
-            console.warn('Error updating localStorage after Supabase update:', localStorageError);
+            console.warn(
+              "Error updating localStorage after Supabase update:",
+              localStorageError,
+            );
           }
 
           return data[0];
@@ -264,25 +315,38 @@ export const productService = {
           console.warn(`Error updating product ${id} in Supabase:`, error);
         }
       } catch (supabaseError) {
-        console.warn(`Supabase connection error when updating product ${id}:`, supabaseError);
+        console.warn(
+          `Supabase connection error when updating product ${id}:`,
+          supabaseError,
+        );
       }
 
       // If Supabase update failed, try to update in localStorage
       try {
-        const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
+        const localProducts = JSON.parse(
+          localStorage.getItem("products") || "[]",
+        );
         const productIndex = localProducts.findIndex((p: any) => p.id === id);
 
         if (productIndex >= 0) {
-          localProducts[productIndex] = { ...localProducts[productIndex], ...updates };
-          localStorage.setItem('products', JSON.stringify(localProducts));
+          localProducts[productIndex] = {
+            ...localProducts[productIndex],
+            ...updates,
+          };
+          localStorage.setItem("products", JSON.stringify(localProducts));
           return localProducts[productIndex];
         }
       } catch (localStorageError) {
-        console.warn(`Error updating product ${id} in localStorage:`, localStorageError);
+        console.warn(
+          `Error updating product ${id} in localStorage:`,
+          localStorageError,
+        );
       }
 
       // If we got here, the product wasn't found in either place
-      console.log(`Product ${id} not found for update in Supabase or localStorage`);
+      console.log(
+        `Product ${id} not found for update in Supabase or localStorage`,
+      );
       return null;
     } catch (error: any) {
       console.error(`Unexpected error in updateProduct:`, error);
@@ -300,15 +364,14 @@ export const productService = {
       // Try to delete from Supabase first
       try {
         // Verify Supabase client is properly initialized
-        if (!supabase || typeof supabase.from !== 'function') {
-          console.warn(`Supabase client not properly initialized when deleting product ${id}`);
-          throw new Error('Supabase client not properly initialized');
+        if (!supabase || typeof supabase.from !== "function") {
+          console.warn(
+            `Supabase client not properly initialized when deleting product ${id}`,
+          );
+          throw new Error("Supabase client not properly initialized");
         }
-        
-        const { error } = await supabase
-          .from('products')
-          .delete()
-          .eq('id', id);
+
+        const { error } = await supabase.from("products").delete().eq("id", id);
 
         if (!error) {
           deletedFromSupabase = true;
@@ -316,23 +379,31 @@ export const productService = {
           console.warn(`Error deleting product ${id} from Supabase:`, error);
         }
       } catch (supabaseError) {
-        console.warn(`Supabase connection error when deleting product ${id}:`, supabaseError);
+        console.warn(
+          `Supabase connection error when deleting product ${id}:`,
+          supabaseError,
+        );
       }
 
       // Also delete from localStorage to keep them in sync
       try {
-        const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
+        const localProducts = JSON.parse(
+          localStorage.getItem("products") || "[]",
+        );
         const filteredProducts = localProducts.filter((p: any) => p.id !== id);
 
         if (filteredProducts.length < localProducts.length) {
-          localStorage.setItem('products', JSON.stringify(filteredProducts));
+          localStorage.setItem("products", JSON.stringify(filteredProducts));
           console.log(`Product ${id} deleted from localStorage`);
           return true; // Successfully deleted from localStorage
         } else if (deletedFromSupabase) {
           return true; // Successfully deleted from Supabase but not in localStorage
         }
       } catch (localStorageError) {
-        console.warn(`Error accessing localStorage when deleting product ${id}:`, localStorageError);
+        console.warn(
+          `Error accessing localStorage when deleting product ${id}:`,
+          localStorageError,
+        );
         if (deletedFromSupabase) {
           return true; // Successfully deleted from Supabase but localStorage failed
         }
@@ -344,11 +415,13 @@ export const productService = {
       }
 
       // If we got here, the product wasn't found in either place
-      console.log(`Product ${id} not found for deletion in Supabase or localStorage`);
+      console.log(
+        `Product ${id} not found for deletion in Supabase or localStorage`,
+      );
       return false;
     } catch (error: any) {
       console.error(`Unexpected error in deleteProduct:`, error);
       return false;
     }
-  }
+  },
 };
