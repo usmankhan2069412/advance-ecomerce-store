@@ -29,7 +29,7 @@ export default function CategoriesPage() {
           "@/services/categoryService"
         );
         const service = await CategoryService.getInstance();
-        setCategoryService(service);
+        setCategoryService(service.public);
       } catch (error) {
         console.error("Failed to initialize category service:", error);
         toast.error(
