@@ -1,16 +1,28 @@
-import  supabase  from './supabase';
-import localStorageDB from '@/lib/localStorageDB';
+import supabase from '@/lib/supabase';
 
-// Validate Supabase connection
-let supabaseInitialized = false;
-
-// Check if Supabase client is properly initialized
-if (supabase && typeof supabase.from === 'function') {
-  supabaseInitialized = true;
-  console.log('Supabase client validated in productService');
-} else {
-  console.warn('Supabase client not properly initialized in productService');
+/**
+ * Product type definition
+ */
+interface Product {
+  id?: string;
+  name: string;
+  description?: string;
+  price: number;
+  compare_at_price?: number;
+  image?: string;
+  images?: string[];
+  category_id: string; // ✅ changed from category to category_id
+  type: 'Man' | 'Woman' | 'Accessories';
+  tags?: string[];
+  inventory?: number;
+  sku?: string;
+  is_new?: boolean;
+  sustainability_score?: number;
+  client_id?: string ;
+  created_at?: string;
+  updated_at?: string;
 }
+
 
 /**
  * Product service for Supabase database operations
@@ -18,273 +30,125 @@ if (supabase && typeof supabase.from === 'function') {
 export const productService = {
   /**
    * Get all products
+   * @returns Promise<Product[]>
    */
-  async getProducts() {
+  async getProducts(): Promise<Product[]> {
     try {
-      // First try to get products from Supabase
-      try {
-        // Verify Supabase client is properly initialized
-        if (!supabase || typeof supabase.from !== 'function') {
-          console.warn('Supabase client not properly initialized in getProducts');
-          throw new Error('Supabase client not properly initialized');
-        }
-        
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .order('created_at', { ascending: false });
+      this.validateSupabaseConnection();
 
-        if (error) {
-          console.warn('Error fetching products from Supabase:', error);
-          // Don't throw, just continue to localStorage fallback
-        } else {
-          // If we have data from Supabase, merge with localStorage data
-          const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-          // Create a map of existing IDs to avoid duplicates
-          const existingIds = new Set(data.map((p: { id: string }) => p.id));
-
-          // Filter local products to only include those not in Supabase
-          const uniqueLocalProducts = localProducts.filter((p: any) => !existingIds.has(p.id));
-
-          // Combine both sources
-          const allProducts = [...data, ...uniqueLocalProducts];
-          console.log(`Retrieved ${allProducts.length} products (${data.length} from Supabase, ${uniqueLocalProducts.length} from localStorage)`);
-
-          return allProducts;
-        }
-      } catch (supabaseError) {
-        console.warn('Supabase connection error:', supabaseError);
-        // Continue to localStorage fallback
+      if (error) {
+        console.warn('Error fetching products from Supabase:', error);
+        return [];
       }
 
-      // If we get here, Supabase failed, so use localStorage
-      const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-      console.log('Using localStorage products:', localProducts.length);
-      return localProducts;
-    } catch (error: any) {
+      return data || [];
+    } catch (error) {
       console.error('Unexpected error in getProducts:', error);
-      // Return empty array as last resort
       return [];
     }
   },
 
   /**
    * Get a product by ID
+   * @param id - Product ID
+   * @returns Promise<Product | null>
    */
-  async getProductById(id: string) {
+  async getProductById(id: string): Promise<Product | null> {
     try {
-      // Try to get from Supabase first
-      try {
-        // Verify Supabase client is properly initialized
-        if (!supabase || typeof supabase.from !== 'function') {
-          console.warn(`Supabase client not properly initialized when fetching product ${id}`);
-          throw new Error('Supabase client not properly initialized');
-        }
-        
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', id)
-          .single();
+      this.validateSupabaseConnection();
 
-        if (!error && data) {
-          return data;
-        }
-
-        // If there was an error, log it but don't throw yet
-        if (error) {
-          console.warn(`Error fetching product ${id} from Supabase:`, error);
-        }
-      } catch (supabaseError) {
-        console.warn(`Supabase connection error when fetching product ${id}:`, supabaseError);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) {
+        console.warn(`Error fetching product ${id} from Supabase:`, error);
+        return null;
       }
 
-      // Check localStorage regardless of whether Supabase succeeded
-      try {
-        console.log(`Checking localStorage for product ${id}`);
-        const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-        const localProduct = localProducts.find((p: any) => p.id === id);
-
-        if (localProduct) {
-          console.log(`Found product ${id} in localStorage`);
-          return localProduct;
-        }
-      } catch (localStorageError) {
-        console.warn(`Error accessing localStorage for product ${id}:`, localStorageError);
-      }
-
-      // If we got here, the product wasn't found in either place
-      console.log(`Product ${id} not found in Supabase or localStorage`);
-      return null; // Return null instead of throwing
-    } catch (error: any) {
+      return data;
+    } catch (error) {
       console.error(`Unexpected error in getProductById:`, error);
-      return null; // Return null instead of throwing
+      return null;
     }
   },
 
   /**
    * Create a new product
+   * @param product - Partial product data
+   * @returns Promise<Product>
    */
-  async createProduct(product: any) {
+  async createProduct(product: Partial<Product>): Promise<Product> {
     try {
-      console.log('Creating product in Supabase:', {
-        ...product,
-        image: product.image ? (typeof product.image === 'string' ? product.image.substring(0, 30) + '...' : 'Image object') : 'No image'
-      });
-      const productData = {
-        ...product,
-        image: product.image || (product.images && product.images.length > 0 ? product.images[0] : 'https://placehold.co/600x400?text=No+Image'),
-        is_new: product.isNew || product.is_new || true,
-        sustainability_score: product.sustainabilityScore || product.sustainability_score || 3,
-      };
-
-      if (!productData.name || !productData.price || !productData.category) {
-        throw new Error('Product name, price and category are required fields');
+      // Input validation
+      if (!product) {
+        throw new Error('Product data is required');
       }
 
-      if (isNaN(productData.price) || productData.price <= 0) {
-        throw new Error('Price must be a positive number');
+      // Validate required fields
+      this.validateRequiredFields(product);
+
+      // Prepare product data
+      const productData = this.prepareProductData(product);
+
+      // Validate Supabase connection
+      this.validateSupabaseConnection();
+
+      // Insert product
+      const { data, error } = await supabase
+        .from('products')
+        .insert([productData])
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Supabase error: ${error.message}`);
       }
 
-      const cleanProductData = { ...productData };
-      Object.keys(cleanProductData).forEach(key => {
-        if (cleanProductData[key] === undefined) {
-          delete cleanProductData[key];
-        }
-      });
-
-      // Validate Supabase connection with a proper count query
-      try {
-        const { data, error: connectionTestError } = await supabase
-          .from('pg_tables')
-          .select('*')
-          .eq('schemaname', 'public')
-          .eq('tablename', 'products')
-          .single();
-        const tableExists = !connectionTestError && data;
-
-        if (!tableExists) {
-          console.warn('Products table does not exist in Supabase');
-          throw new Error('Products table not found - run database migrations');
-        }
-
-        if (connectionTestError) {
-          console.warn('Supabase connection test failed:', connectionTestError);
-          throw new Error(`Supabase connection failed: ${connectionTestError.message}`);
-        }
-
-        console.log('Supabase connection validated - products table exists');
-      } catch (connectionError) {
-        console.warn('Supabase connection validation failed:', connectionError);
-        throw new Error('Supabase connection validation failed - check network and permissions');
+      if (!data) {
+        throw new Error('No data returned from Supabase after insert');
       }
 
-      // Insert product with proper typing
-      try {
-        // Generate proper UUID for product
-        if (!cleanProductData.id) {
-          cleanProductData.id = crypto.randomUUID(); // Ensure browser supports crypto
-        }
-
-        // Insert with proper typing
-        const { data, error } = await supabase
-          .from('products')
-          .insert([cleanProductData])
-          .select('*');
-
-        if (error) throw error;
-        if (!data || data.length === 0) throw new Error('No data returned from Supabase');
-
-        const createdProduct = data[0];
-        console.log('Product created in Supabase:', createdProduct);
-
-        // Sync with localStorage
-        const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-        localStorage.setItem('products', JSON.stringify([...localProducts, createdProduct]));
-
-        return createdProduct;
-      } catch (insertError) {
-        console.error('Supabase insert failed:', insertError);
-        
-        // Handle specific error codes
-        if ((insertError as { code?: string }).code === '23505') {
-          throw new Error('Product with this ID already exists');
-        }
-        
-        // Fallback to localStorage
-        console.log('Falling back to localStorage...');
-        const { data } = localStorageDB.insert('products', cleanProductData);
-        return data;
-      }
-    } catch (error: any) {
+      return data;
+    } catch (error) {
       console.error('Error in createProduct:', error);
-      throw new Error(`Failed to create product: ${error.message}`);
+      throw error instanceof Error ? error : new Error('Failed to create product');
     }
   },
 
   /**
    * Update a product
+   * @param id - Product ID
+   * @param updates - Partial product data
+   * @returns Promise<Product | null>
    */
-  async updateProduct(id: string, updates: any) {
+  async updateProduct(id: string, updates: Partial<Product>): Promise<Product | null> {
     try {
-      // Try to update in Supabase first
-      try {
-        // Verify Supabase client is properly initialized
-        if (!supabase || typeof supabase.from !== 'function') {
-          console.warn(`Supabase client not properly initialized when updating product ${id}`);
-          throw new Error('Supabase client not properly initialized');
-        }
-        
-        const { data, error } = await supabase
-          .from('products')
-          .update(updates)
-          .eq('id', id)
-          .select();
+      this.validateSupabaseConnection();
 
-        if (!error && data && data.length > 0) {
-          // Also update in localStorage to keep them in sync
-          try {
-            const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-            const productIndex = localProducts.findIndex((p: any) => p.id === id);
+      // Clean and validate updates
+      const cleanUpdates = this.cleanProductData(updates);
 
-            if (productIndex >= 0) {
-              localProducts[productIndex] = { ...localProducts[productIndex], ...updates };
-              localStorage.setItem('products', JSON.stringify(localProducts));
-            }
-          } catch (localStorageError) {
-            console.warn('Error updating localStorage after Supabase update:', localStorageError);
-          }
+      const { data, error } = await supabase
+        .from('products')
+        .update(cleanUpdates)
+        .eq('id', id)
+        .select()
+        .single();
 
-          return data[0];
-        }
-
-        // If there was an error, log it but don't throw yet
-        if (error) {
-          console.warn(`Error updating product ${id} in Supabase:`, error);
-        }
-      } catch (supabaseError) {
-        console.warn(`Supabase connection error when updating product ${id}:`, supabaseError);
+      if (error) {
+        console.warn(`Error updating product ${id} in Supabase:`, error);
+        return null;
       }
 
-      // If Supabase update failed, try to update in localStorage
-      try {
-        const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-        const productIndex = localProducts.findIndex((p: any) => p.id === id);
-
-        if (productIndex >= 0) {
-          localProducts[productIndex] = { ...localProducts[productIndex], ...updates };
-          localStorage.setItem('products', JSON.stringify(localProducts));
-          return localProducts[productIndex];
-        }
-      } catch (localStorageError) {
-        console.warn(`Error updating product ${id} in localStorage:`, localStorageError);
-      }
-
-      // If we got here, the product wasn't found in either place
-      console.log(`Product ${id} not found for update in Supabase or localStorage`);
-      return null;
-    } catch (error: any) {
+      return data;
+    } catch (error) {
       console.error(`Unexpected error in updateProduct:`, error);
       return null;
     }
@@ -292,63 +156,107 @@ export const productService = {
 
   /**
    * Delete a product
+   * @param id - Product ID
+   * @returns Promise<boolean>
    */
-  async deleteProduct(id: string) {
+  async deleteProduct(id: string): Promise<boolean> {
     try {
-      let deletedFromSupabase = false;
+      this.validateSupabaseConnection();
 
-      // Try to delete from Supabase first
-      try {
-        // Verify Supabase client is properly initialized
-        if (!supabase || typeof supabase.from !== 'function') {
-          console.warn(`Supabase client not properly initialized when deleting product ${id}`);
-          throw new Error('Supabase client not properly initialized');
-        }
-        
-        const { error } = await supabase
-          .from('products')
-          .delete()
-          .eq('id', id);
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
 
-        if (!error) {
-          deletedFromSupabase = true;
-        } else {
-          console.warn(`Error deleting product ${id} from Supabase:`, error);
-        }
-      } catch (supabaseError) {
-        console.warn(`Supabase connection error when deleting product ${id}:`, supabaseError);
+      if (error) {
+        console.warn(`Error deleting product ${id} from Supabase:`, error);
+        return false;
       }
 
-      // Also delete from localStorage to keep them in sync
-      try {
-        const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-        const filteredProducts = localProducts.filter((p: any) => p.id !== id);
-
-        if (filteredProducts.length < localProducts.length) {
-          localStorage.setItem('products', JSON.stringify(filteredProducts));
-          console.log(`Product ${id} deleted from localStorage`);
-          return true; // Successfully deleted from localStorage
-        } else if (deletedFromSupabase) {
-          return true; // Successfully deleted from Supabase but not in localStorage
-        }
-      } catch (localStorageError) {
-        console.warn(`Error accessing localStorage when deleting product ${id}:`, localStorageError);
-        if (deletedFromSupabase) {
-          return true; // Successfully deleted from Supabase but localStorage failed
-        }
-      }
-
-      // If we got here and the product was deleted from Supabase, return true
-      if (deletedFromSupabase) {
-        return true;
-      }
-
-      // If we got here, the product wasn't found in either place
-      console.log(`Product ${id} not found for deletion in Supabase or localStorage`);
-      return false;
-    } catch (error: any) {
+      return true;
+    } catch (error) {
       console.error(`Unexpected error in deleteProduct:`, error);
       return false;
     }
+  },
+
+  /**
+   * Validate Supabase connection
+   * @internal
+   */
+  validateSupabaseConnection(): void {
+    if (!supabase || typeof supabase.from !== 'function') {
+      throw new Error('Supabase client not properly initialized');
+    }
+  },
+
+  /**
+   * Validate required product fields
+   * @internal
+   * @param product - Partial product data
+   */
+  validateRequiredFields(product: Partial<Product>): void {
+    const requiredFields = ['name', 'price', 'category_id', 'type'] as const;
+    type RequiredField = typeof requiredFields[number];
+    
+    const missingFields = requiredFields.filter(field => {
+      const value = product[field as keyof Pick<Product, RequiredField>];
+      return !value || 
+             (typeof value === 'string' && value.trim() === '') ||
+             (field === 'price' && (typeof value !== 'number' || isNaN(value) || value <= 0));
+    });
+
+    if (missingFields.length > 0) {
+      throw new Error(`Missing or invalid required fields: ${missingFields.join(', ')}`);
+    }
+
+    // Validate type field
+    const validTypes = ['Man', 'Woman', 'Accessories'] as const;
+    if (product.type && !validTypes.includes(product.type as typeof validTypes[number])) {
+      throw new Error(`Invalid product type. Must be one of: ${validTypes.join(', ')}`);
+    }
+  },
+
+  /**
+   * Prepare product data for creation/update
+   * @internal
+   * @param product - Partial product data
+   * @returns Product data
+   */
+  prepareProductData(product: Partial<Product>): Product {
+    return {
+      name: product.name!.trim(),
+      description: product.description?.trim() || '',
+      price: product.price!,
+      compare_at_price: product.compare_at_price,
+      category_id: product.category_id!.trim(), // ✅ instead of category
+      type: product.type!.trim() as Product['type'],
+      image: product.image || (product.images && product.images.length > 0 
+        ? product.images[0] 
+        : 'https://placehold.co/600x400?text=No+Image'),
+      images: product.images,
+      tags: product.tags,
+      inventory: product.inventory,
+      sku: product.sku,
+      is_new: true,
+      client_id: product.client_id || `temp_${Date.now()}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    } as Product;
+  },
+
+  /**
+   * Clean product data by removing undefined values
+   * @internal
+   * @param data - Partial product data
+   * @returns Cleaned product data
+   */
+  cleanProductData<T extends Partial<Product>>(data: T): Partial<Product> {
+    return Object.entries(data).reduce((acc, [key, value]) => {
+      if (value !== undefined && key in data) {
+        (acc as any)[key] = value;
+      }
+      return acc;
+    }, {} as Partial<Product>);
   }
 };

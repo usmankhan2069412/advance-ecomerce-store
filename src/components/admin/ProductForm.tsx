@@ -32,6 +32,7 @@ export interface ProductFormData {
   compareAtPrice?: number;
   images: string[];
   category: string;
+  type: string;
   tags: string[];
   inventory: number;
   sku: string;
@@ -54,6 +55,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
       compareAtPrice: undefined,
       images: [],
       category: "",
+      type: "",
       tags: [],
       inventory: 0,
       sku: "",
@@ -208,6 +210,18 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
     if (!formData.category.trim()) {
       newErrors.category = 'Category is required';
       toast.error('Category is required');
+    }
+
+    if (!formData.type) {
+      newErrors.type = 'Type is required';
+      toast.error('Type is required');
+    }
+
+    // Validate type value
+    const validTypes = ['Man', 'Woman', 'Accessories'];
+    if (formData.type && !validTypes.includes(formData.type)) {
+      newErrors.type = 'Invalid type selected';
+      toast.error('Invalid type selected');
     }
 
     if (!formData.sku.trim()) {
@@ -443,11 +457,11 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                       {categories.length > 0 ? (
                         categories.map((category) => (
                           <SelectItem
-                            key={category.id}
-                            value={category.id} // Use ID as the value instead of name
+                            key={category.id}        // Using category.id as unique key
+                            value={category.id}      // Using ID as value
                             className="py-2 px-3 text-sm hover:bg-gray-100 cursor-pointer"
                           >
-                            {category.name}
+                            {category.name}          // Display category name
                           </SelectItem>
                         ))
                       ) : (
@@ -473,6 +487,28 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                   </div>
                 </div>
                 {errors.category && <p className="mt-1 text-sm text-red-500">{errors.category}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="type" className="block cursor-pointer  text-sm font-medium text-gray-700 mb-1">
+                  Type
+                </Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) => setFormData({ ...formData, type: value })}
+                >
+                  <SelectTrigger
+                    className={`w-full h-10 px-3 py-2 text-sm border cursor-pointer rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.type ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'}`}
+                  >
+                    <SelectValue placeholder="Select a type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Man">Man</SelectItem>
+                    <SelectItem value="Woman">Woman</SelectItem>
+                    <SelectItem value="Accessories">Accessories</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.type && <p className="mt-1 text-sm text-red-500">{errors.type}</p>}
               </div>
 
               <div>

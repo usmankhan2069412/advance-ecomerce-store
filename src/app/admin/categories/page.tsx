@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit, Trash, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { categoryService } from "@/services/categoryService";
+import CategoryService from "@/services/categoryService";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 /**
  * Categories Management Page
@@ -16,18 +17,36 @@ import { toast } from "sonner";
  */
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
-  const [newCategory, setNewCategory] = useState({ name: "", description: "" });
+  const [newCategory, setNewCategory] = useState({ 
+    name: "", 
+    description: "",
+    type: "" 
+  });
   const [isAdding, setIsAdding] = useState(false);
+  const [categoryServiceInstance, setCategoryServiceInstance] = useState<CategoryService | null>(null);
+
+  // Initialize CategoryService
+  useEffect(() => {
+    const initService = async () => {
+      const instance = await CategoryService.getInstance();
+      setCategoryServiceInstance(instance);
+    };
+    initService();
+  }, []);
 
   // Load categories from Supabase on component mount
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    if (categoryServiceInstance) {
+      fetchCategories();
+    }
+  }, [categoryServiceInstance]);
 
   // Fetch categories from Supabase or fallback
   const fetchCategories = async () => {
+    if (!categoryServiceInstance) return;
+
     try {
-      const data = await categoryService.getCategories();
+      const data = await categoryServiceInstance.public.getCategories();
 
       if (!data || data.length === 0) {
         console.log('No categories found or all categories have been deleted');
@@ -47,15 +66,22 @@ export default function CategoriesPage() {
    * Handle adding a new category
    */
   const handleAddCategory = async () => {
+    if (!categoryServiceInstance) return;
     if (!newCategory.name.trim()) {
       toast.error('Category name is required');
       return;
     }
 
+    if (!newCategory.type) {
+      toast.error('Category type is required');
+      return;
+    }
+
     try {
-      const createdCategory = await categoryService.createCategory({
+      const createdCategory = await categoryServiceInstance.public.createCategory({
         name: newCategory.name.trim(),
         description: newCategory.description.trim(),
+        type: newCategory.type.trim()
       });
 
       // Add the new category to the local state immediately
@@ -69,7 +95,7 @@ export default function CategoriesPage() {
       ]);
 
       // Reset form
-      setNewCategory({ name: "", description: "" });
+      setNewCategory({ name: "", description: "", type: "" });
       setIsAdding(false);
 
       toast.success(`Category "${createdCategory.name}" created successfully!`);
@@ -92,6 +118,7 @@ export default function CategoriesPage() {
    * Handle deleting a category
    */
   const handleDeleteCategory = async (id: string) => {
+    if (!categoryServiceInstance) return;
     if (!confirm("Are you sure you want to delete this category?")) return;
 
     try {
@@ -100,7 +127,7 @@ export default function CategoriesPage() {
       const categoryName = categoryToDelete?.name || id;
 
       // Delete the category
-      const success = await categoryService.deleteCategory(id);
+      const success = await categoryServiceInstance.public.deleteCategory(id);
 
       if (success) {
         toast.success(`Category "${categoryName}" deleted successfully`);
@@ -177,6 +204,24 @@ export default function CategoriesPage() {
                     placeholder="Brief description of this category"
                   />
                 </div>
+                <div>
+                  <label htmlFor="type" className="block text-sm font-medium mb-1">
+                    Type
+                  </label>
+                  <Select
+                    value={newCategory.type}
+                    onValueChange={(value) => setNewCategory({ ...newCategory, type: value })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Man">Man</SelectItem>
+                      <SelectItem value="Woman">Woman</SelectItem>
+                      <SelectItem value="Accessories">Accessories</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsAdding(false)}>
                     Cancel
@@ -207,6 +252,9 @@ export default function CategoriesPage() {
                       Description
                     </th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      Type
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                       Products
                     </th>
                     <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
@@ -222,6 +270,9 @@ export default function CategoriesPage() {
                       </td>
                       <td className="p-4 align-middle text-muted-foreground">
                         {category.description}
+                      </td>
+                      <td className="p-4 align-middle text-muted-foreground">
+                        {category.type || 'N/A'}
                       </td>
                       <td className="p-4 align-middle">
                         {category.productCount || 0}

@@ -32,17 +32,26 @@ export default function NewProductPage() {
       submitButton.disabled = true;
     }
 
-    console.log('Submitting product data:', { ...data, images: data.images.length > 0 ? [`${data.images[0].substring(0, 30)}...`] : [] });
+    console.log('Submitting product data:', { 
+      ...data, 
+      images: data.images.length > 0 ? [`${data.images[0].substring(0, 30)}...`] : [] 
+    });
 
     try {
       // Validate required fields first
-      if (!data.name || !data.price || !data.category) {
-        throw new Error('Name, price and category are required fields');
+      if (!data.name || !data.price || !data.category || !data.type) {
+        throw new Error('Name, price, category and type are required fields');
       }
 
       // Validate price is a positive number
       if (isNaN(data.price) || data.price <= 0) {
         throw new Error('Price must be a positive number');
+      }
+
+      // Validate type
+      const validTypes = ['Man', 'Woman', 'Accessories'];
+      if (!validTypes.includes(data.type)) {
+        throw new Error(`Invalid type. Must be one of: ${validTypes.join(', ')}`);
       }
 
       // Make sure we have at least one image
@@ -58,17 +67,19 @@ export default function NewProductPage() {
       const clientId = `temp_${Date.now()}`;
 
       // Get the category name from the category ID
-      let categoryName = data.category;
-      try {
-        const service = await categoryService.getInstance();
-        const categories = await service.public.getCategories();
-        const selectedCategory = categories.find((cat: { id: string }) => cat.id === data.category);
-        if (selectedCategory) {
-          categoryName = selectedCategory.name;
-        }
-      } catch (error) {
-        console.warn('Error fetching category name:', error);
-      }
+     // This resolves category name from ID
+let categoryName = data.category;
+try {
+  const service = await categoryService.getInstance();
+  const categories = await service.public.getCategories();
+  const selectedCategory = categories.find((cat: { id: string }) => cat.id === data.category);
+  if (selectedCategory) {
+    categoryName = selectedCategory.name;
+  }
+} catch (error) {
+  console.warn('Error fetching category name:', error);
+}
+
 
       // Try to use Supabase, fall back to localStorage if it fails
       try {
@@ -78,17 +89,16 @@ export default function NewProductPage() {
           description: data.description,
           price: data.price,
           compare_at_price: data.compareAtPrice,
-          image: mainImage, // Set the main image
+          image: mainImage,
           images: data.images,
-          category: categoryName, // Use the category name
-          category_id: data.category, // Also store the category ID
+          category_id: data.category,
+          category_name: categoryName,
+          type: data.type as ProductType, // Cast the type here
           tags: data.tags,
           inventory: data.inventory,
           sku: data.sku,
-          ai_match_score: data.aiMatchScore,
-          ai_recommendation_reason: data.aiRecommendationReason,
-          is_new: true, // Mark as new product
-          client_id: clientId, // Add a client ID to help prevent duplicates
+          is_new: true,
+          client_id: clientId,
         };
 
         console.log('Creating product with data:', {
@@ -121,6 +131,7 @@ export default function NewProductPage() {
 
         // Try to create the product using localStorage fallback
         try {
+          // In the fallback section
           const fallbackProduct = await productService.createProduct({
             name: data.name,
             description: data.description,
@@ -128,13 +139,12 @@ export default function NewProductPage() {
             compare_at_price: data.compareAtPrice,
             image: mainImage,
             images: data.images,
-            category: categoryName,
             category_id: data.category,
+            category_name: categoryName, // Added category_name
+            type: data.type as 'Man' | 'Woman' | 'Accessories',
             tags: data.tags,
             inventory: data.inventory,
             sku: data.sku,
-            ai_match_score: data.aiMatchScore,
-            ai_recommendation_reason: data.aiRecommendationReason,
             is_new: true,
             client_id: clientId,
           });

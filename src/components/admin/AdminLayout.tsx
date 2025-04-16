@@ -95,6 +95,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       children: [
         { name: "All Products", path: "/admin/products" },
         { name: "Add Product", path: "/admin/products/new" },
+        { name: "Inventory Management", path: "/admin/products/inventory" }, // Added Inventory link
         { name: "Categories", path: "/admin/categories" },
         { name: "Attributes", path: "/admin/attributes" },
       ],
