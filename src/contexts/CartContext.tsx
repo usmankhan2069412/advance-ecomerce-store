@@ -1,13 +1,15 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-interface CartItem {
+export interface CartItem {
   id: string;
   name: string;
   price: number;
   quantity: number;
   image: string;
+  size?: string;
+  color?: string;
 }
 
 interface CartContextType {
@@ -26,9 +28,28 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  // Initialize with empty array to avoid hydration mismatch
   const [items, setItems] = useState<CartItem[]>([]);
+
+  // Load cart items from localStorage after component mounts
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        setItems(JSON.parse(savedCart));
+      }
+    }
+  }, []);
+
   const [promoCodeDiscount, setPromoCodeDiscount] = useState(0);
   const shippingCost = 10; // Example fixed shipping cost
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cart', JSON.stringify(items));
+    }
+  }, [items]);
 
   const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
   const tax = subtotal * 0.1; // Example 10% tax rate

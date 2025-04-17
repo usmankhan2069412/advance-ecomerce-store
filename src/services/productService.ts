@@ -12,6 +12,7 @@ interface Product {
   image?: string;
   images?: string[];
   category_id: string; // ✅ changed from category to category_id
+  category_name?: string; // ✅ added category_name field
   type: 'Man' | 'Woman' | 'Accessories';
   tags?: string[];
   inventory?: number;
@@ -229,7 +230,7 @@ export const productService = {
       description: product.description?.trim() || '',
       price: product.price!,
       compare_at_price: product.compare_at_price,
-      category_id: product.category_id!.trim(), // ✅ instead of category
+      category_id: product.category_id!.trim(), //  instead of category
       type: product.type!.trim() as Product['type'],
       image: product.image || (product.images && product.images.length > 0 
         ? product.images[0] 
@@ -260,3 +261,6 @@ export const productService = {
     }, {} as Partial<Product>);
   }
 };
+
+
+

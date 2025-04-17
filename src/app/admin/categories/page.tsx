@@ -17,12 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
  */
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
-  const [newCategory, setNewCategory] = useState({ 
-    name: "", 
+  const [newCategory, setNewCategory] = useState({
+    name: "",
     description: "",
-    type: "" 
+    type: ""
   });
   const [isAdding, setIsAdding] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [categoryServiceInstance, setCategoryServiceInstance] = useState<CategoryService | null>(null);
 
   // Initialize CategoryService
@@ -110,6 +112,63 @@ export default function CategoriesPage() {
         toast.error(error.message);
       } else {
         toast.error('Failed to create category. Please try again.');
+      }
+    }
+  };
+
+  /**
+   * Handle editing a category
+   */
+  const handleEditCategory = (category: any) => {
+    setNewCategory({
+      name: category.name,
+      description: category.description || '',
+      type: category.type || ''
+    });
+    setEditingCategoryId(category.id);
+    setIsEditing(true);
+    setIsAdding(false);
+  };
+
+  /**
+   * Save edited category
+   */
+  const handleSaveEdit = async () => {
+    if (!categoryServiceInstance || !editingCategoryId) return;
+    if (!newCategory.name.trim()) {
+      toast.error('Category name is required');
+      return;
+    }
+
+    try {
+      const updatedCategory = await categoryServiceInstance.public.updateCategory(editingCategoryId, {
+        name: newCategory.name.trim(),
+        description: newCategory.description.trim(),
+        type: newCategory.type.trim()
+      });
+
+      // Update the category in the local state
+      setCategories(prevCategories =>
+        prevCategories.map(cat =>
+          cat.id === editingCategoryId ? { ...cat, ...updatedCategory } : cat
+        )
+      );
+
+      // Reset form
+      setNewCategory({ name: "", description: "", type: "" });
+      setIsEditing(false);
+      setEditingCategoryId(null);
+
+      toast.success(`Category "${updatedCategory.name}" updated successfully!`);
+
+      // Also refresh the list to ensure everything is in sync
+      setTimeout(() => fetchCategories(), 500);
+    } catch (error) {
+      console.error('Error updating category:', error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to update category. Please try again.');
       }
     }
   };
@@ -235,6 +294,71 @@ export default function CategoriesPage() {
           </Card>
         )}
 
+        {/* Edit Category Form */}
+        {isEditing && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Edit Category</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                <div>
+                  <label htmlFor="edit-name" className="block text-sm font-medium mb-1">
+                    Category Name
+                  </label>
+                  <Input
+                    id="edit-name"
+                    value={newCategory.name}
+                    onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                    placeholder="e.g., Summer Collection"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-description" className="block text-sm font-medium mb-1">
+                    Description
+                  </label>
+                  <Input
+                    id="edit-description"
+                    value={newCategory.description}
+                    onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                    placeholder="Brief description of this category"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-type" className="block text-sm font-medium mb-1">
+                    Type
+                  </label>
+                  <Select
+                    value={newCategory.type}
+                    onValueChange={(value) => setNewCategory({ ...newCategory, type: value })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Man">Man</SelectItem>
+                      <SelectItem value="Woman">Woman</SelectItem>
+                      <SelectItem value="Accessories">Accessories</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => {
+                    setIsEditing(false);
+                    setEditingCategoryId(null);
+                    setNewCategory({ name: "", description: "", type: "" });
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveEdit}>
+                    Update Category
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Categories List */}
         <Card>
           <CardHeader>
@@ -279,7 +403,11 @@ export default function CategoriesPage() {
                       </td>
                       <td className="p-4 align-middle text-right">
                         <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="ghost">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEditCategory(category)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button

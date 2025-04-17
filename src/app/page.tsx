@@ -1,5 +1,6 @@
 import React from "react";
 import Header from "@/components/Header";
+import HeaderWrapper from "@/components/HeaderWrapper";
 import HeroSection from "@/components/HeroSection";
 import AISearchBar from "@/components/AISearchBar";
 import TrendingSection from "@/components/TrendingSection";
@@ -21,7 +22,7 @@ export default function Home() {
     <ErrorBoundary>
       <main className="min-h-screen bg-white">
         {/* Header with transparent background for hero section */}
-        <Header transparent={true} />
+        <HeaderWrapper transparent={true} />
 
         {/* Hero Section with runway video and featured products */}
         <Suspense

@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { Input } from "./ui/input";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Instagram, Facebook, Twitter, Youtube, Mail } from "lucide-react";
 
 interface FooterProps {

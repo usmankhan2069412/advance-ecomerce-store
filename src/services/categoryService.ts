@@ -65,7 +65,7 @@ class CategoryService {
       return [];
     },
 
-    async createCategory(category: { name: string; description: string }) {
+    async createCategory(category: { name: string; description: string; type?: string }) {
       try {
         if (!category.name?.trim()) throw new Error('Category name is required');
 
@@ -73,14 +73,16 @@ class CategoryService {
         const newCategory = {
           id: categoryId,
           name: category.name.trim(),
-          description: category.description?.trim() || ''
+          description: category.description?.trim() || '',
+          type: category.type?.trim() || ''
         };
 
         const { data, error } = await supabase
           .from('categories')
           .insert([{
             name: newCategory.name,
-            description: newCategory.description
+            description: newCategory.description,
+            type: newCategory.type
           }])
           .select();
 
@@ -108,7 +110,7 @@ class CategoryService {
       }
     },
 
-    async updateCategory(id: string, updates: { name?: string; description?: string }) {
+    async updateCategory(id: string, updates: { name?: string; description?: string; type?: string }) {
       try {
         if (updates.name !== undefined && !updates.name.trim()) {
           throw new Error('Category name cannot be empty');
@@ -116,7 +118,8 @@ class CategoryService {
 
         const cleanUpdates = {
           name: updates.name?.trim(),
-          description: updates.description?.trim() || ''
+          description: updates.description?.trim() || '',
+          type: updates.type?.trim() || ''
         };
 
         const localCategories = JSON.parse(localStorage.getItem('localCategories') || '[]');

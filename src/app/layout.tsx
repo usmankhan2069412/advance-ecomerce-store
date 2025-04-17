@@ -4,6 +4,8 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext';
+import { CartProvider } from '@/contexts/CartContext';
+import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import { SonnerToaster } from '@/components/ui/sonner-toaster';
 
 
@@ -30,7 +32,11 @@ export default function RootLayout({
       <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
       <body className={`${inter.className} antialiased bg-white text-gray-900`}>
           <AuthProvider>
-            {children}
+            <CartProvider>
+              <FavoritesProvider>
+                {children}
+              </FavoritesProvider>
+            </CartProvider>
           </AuthProvider>
         <SonnerToaster />
         <TempoInit />

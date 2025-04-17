@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ProductGrid } from '@/components/ui/ProductGrid';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -262,7 +262,7 @@ export default function ProductsPage() {
           {sizes.map(size => (
             <Button
               key={size}
-              variant={selectedSizes.includes(size) ? 'default' : 'outline'}
+              variant={selectedSizes.includes(size) ? 'link' : 'outline'}
               className="h-10 w-10 p-0"
               onClick={() => handleSizeToggle(size)}
             >

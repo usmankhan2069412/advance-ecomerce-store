@@ -402,10 +402,14 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
               {formData.images.map((image, index) => (
                 <div key={index} className="relative aspect-square rounded-md border border-gray-200 bg-gray-50 ">
-                  <img
+                
+                  <Image
                     src={image}
                     alt={`Product image ${index + 1}`}
+                    width={300}
+                    height={300}
                     className="h-full w-full rounded-md object-cover"
+                    priority={index === 0} // Priority load for first image
                   />
                   <button
                     type="button"
@@ -461,7 +465,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                             value={category.id}      // Using ID as value
                             className="py-2 px-3 text-sm hover:bg-gray-100 cursor-pointer"
                           >
-                            {category.name}          // Display category name
+                            {category.name}          
                           </SelectItem>
                         ))
                       ) : (

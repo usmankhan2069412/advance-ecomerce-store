@@ -17,6 +17,9 @@ import SustainabilityIndicator from "./SustainabilityIndicator";
 import { ARButton } from "@/components/ui/ARButton";
 import { ProductView3D } from "@/components/ui/ProductView3D";
 import { trackProductView, trackAddToCart } from "@/lib/analytics";
+import { useCart } from "@/contexts/CartContext";
+import { useFavorites } from "@/contexts/FavoritesContext";
+import { toast } from "sonner";
 
 interface ProductCardProps {
   id: string;
@@ -107,12 +110,49 @@ const ProductCard = ({
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
 
-  // Handle adding to bag (size and color selection moved to product detail page)
+  // Get cart and favorites contexts
+  const { addItem } = useCart();
+  const { addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites();
+
+  // State for size selection dialog
+  const [showSizeDialog, setShowSizeDialog] = useState(false);
+
+  // Handle adding to bag
   const handleAddToBag = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onAddToBag(id);
+
+    // If product has sizes, show the size selection dialog
+    if (sizes && sizes.length > 0) {
+      setShowSizeDialog(true);
+      return;
+    }
+
+    // If no sizes, add directly to cart
+    addToCart();
+  };
+
+  // Function to add the product to cart
+  const addToCart = () => {
+    // Add the product to the cart using the cart context
+    addItem({
+      id,
+      name,
+      price,
+      quantity: 1,
+      image,
+      size: selectedSize,
+      color: selectedColor
+    });
+
+    // Track the add to cart event for analytics
     trackAddToCart(id, name, price);
+
+    // Show success message
+    toast.success(`${name} added to your bag!`);
+
+    // Close the size dialog if it was open
+    setShowSizeDialog(false);
   };
 
   const handleQuickViewClick = (e: React.MouseEvent) => {
@@ -126,12 +166,97 @@ const ProductCard = ({
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onFavoriteToggle(id, !isFavorite);
+
+    // Use the favorites context to toggle favorite status
+    if (checkIsFavorite(id)) {
+      removeFavorite(id);
+      toast.success(`${name} removed from favorites`);
+    } else {
+      addFavorite({
+        id,
+        name,
+        price,
+        image,
+        description
+      });
+      toast.success(`${name} added to favorites`);
+    }
+
+    // Also call the prop callback if provided
+    onFavoriteToggle(id, !checkIsFavorite(id));
   };
 
   return (
-    <Card className="w-80 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white ">
-      <div className="relative h-96 w-full overflow-hidden group">
+    <>
+      {/* Size Selection Dialog */}
+      {showSizeDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Select Size</h3>
+              <button
+                onClick={() => setShowSizeDialog(false)}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Close dialog"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm text-gray-600 mb-3">Please select a size for {name}</p>
+              <div className="flex flex-wrap gap-2">
+                {sizes.map((size) => (
+                  <button
+                    key={size}
+                    className={`px-3 py-1.5 border rounded-md text-sm ${selectedSize === size ? 'border-black bg-black text-white' : 'border-gray-300 hover:border-gray-400'}`}
+                    onClick={() => setSelectedSize(size)}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {colors.length > 0 && (
+              <div className="mb-6">
+                <p className="text-sm text-gray-600 mb-3">Select Color</p>
+                <div className="flex flex-wrap gap-2">
+                  {colors.map((color) => (
+                    <button
+                      key={color}
+                      className={`w-8 h-8 rounded-full border-2 ${selectedColor === color ? 'border-black' : 'border-transparent'}`}
+                      style={{ backgroundColor: color.toLowerCase() }}
+                      onClick={() => setSelectedColor(color)}
+                      aria-label={`Color: ${color}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button
+                className="flex-1"
+                onClick={addToCart}
+                disabled={sizes.length > 0 && !selectedSize}
+              >
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                Add to Bag
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowSizeDialog(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Card className="w-80 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white ">
+        <div className="relative h-96 w-full overflow-hidden group">
         <Image
           src={image}
           alt={name}
@@ -144,19 +269,14 @@ const ProductCard = ({
             NEW
           </div>
         )}
-        {/* Add Favorite Button Here if using isFavorite/onFavoriteToggle */}
-        {/* Example:
-         <button
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent triggering quick view if needed
-              onFavoriteToggle(id, !isFavorite);
-            }}
-            className="absolute top-3 right-3 bg-white/80 rounded-full p-1.5 hover:bg-white text-gray-600 hover:text-red-500 transition-colors z-10"
-            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-          >
-            <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-500' : 'fill-transparent'}`} />
-          </button>
-        */}
+        {/* Favorite Button */}
+        <button
+          onClick={handleFavoriteToggle}
+          className="absolute top-3 right-3 bg-transparent rounded-full p-1.5 hover:bg-white text-gray-600 hover:text-red-500 transition-colors z-10"
+          aria-label={checkIsFavorite(id) ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Heart className={`h-5 w-5 ${checkIsFavorite(id) ? 'fill-red-500 text-red-500' : 'fill-transparent'}`} />
+        </button>
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -169,7 +289,7 @@ const ProductCard = ({
                 Quick View
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px] bg-white">
+            <DialogContent className="sm:max-w-[800px] bg-white shadow-xl">
               <DialogTitle asChild>
                 <VisuallyHidden>{name} - Quick View</VisuallyHidden>
               </DialogTitle>
@@ -213,10 +333,10 @@ const ProductCard = ({
                       <h2 className="text-2xl font-semibold text-gray-900">{name}</h2>
                       <button
                         onClick={handleFavoriteToggle}
-                        className="p-1.5 rounded-full hover:bg-gray-100"
-                        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                        className="p-1.5 rounded-full bg-transparent "
+                        aria-label={checkIsFavorite(id) ? "Remove from favorites" : "Add to favorites"}
                       >
-                        <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                        <Heart className={`h-5 w-5 ${checkIsFavorite(id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                       </button>
                     </div>
 
@@ -312,16 +432,40 @@ const ProductCard = ({
                     <Button
                       className="flex-1"
                       onClick={(e) => {
-                        // In the quick view dialog, we still use size and color
-                        // This will need to be handled by the parent component
-                        onAddToBag(id, selectedSize, selectedColor);
+                        // Check if size is required but not selected
+                        if (sizes.length > 0 && !selectedSize) {
+                          toast.error("Please select a size");
+                          return;
+                        }
+
+                        // Check if color is required but not selected
+                        if (colors.length > 0 && !selectedColor) {
+                          toast.error("Please select a color");
+                          return;
+                        }
+
+                        // Add the product to the cart using the cart context
+                        addItem({
+                          id,
+                          name,
+                          price,
+                          quantity: 1,
+                          image,
+                          size: selectedSize,
+                          color: selectedColor
+                        });
+
+                        // Track the add to cart event for analytics
                         trackAddToCart(id, name, price);
+
+                        // Show success message and close dialog
+                        toast.success(`${name} added to your bag!`);
                         setIsDialogOpen(false);
                       }}
-                      disabled={sizes.length > 0 && !selectedSize}
+                      disabled={inventory === 0}
                     >
                       <ShoppingBag className="h-4 w-4 mr-2" />
-                      Add to Bag
+                      {inventory > 0 ? "Add to Bag" : "Out of Stock"}
                     </Button>
                     <ARButton
                       productId={id}
@@ -367,12 +511,14 @@ const ProductCard = ({
           variant="outline"
           className="rounded-full"
           onClick={handleAddToBag}
+          disabled={inventory === 0}
         >
           <ShoppingBag className="h-4 w-4 mr-2" />
-          Add to Bag
+          {inventory > 0 ? "Add to Bag" : "Out of Stock"}
         </Button>
       </CardFooter>
     </Card>
+    </>
   );
 };
 

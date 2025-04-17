@@ -93,7 +93,7 @@ try {
           images: data.images,
           category_id: data.category,
           category_name: categoryName,
-          type: data.type as ProductType, // Cast the type here
+          type: data.type as 'Man' | 'Woman' | 'Accessories', // Cast the type here
           tags: data.tags,
           inventory: data.inventory,
           sku: data.sku,

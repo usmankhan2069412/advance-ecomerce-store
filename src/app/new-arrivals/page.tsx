@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {Skeleton} from "@/components/ui/skeleton"
 // Correcting the error by removing the non-existent export 'SkeletonLoader'
 import { 

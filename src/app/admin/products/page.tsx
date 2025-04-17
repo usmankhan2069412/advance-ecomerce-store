@@ -16,12 +16,31 @@ import { toast } from "sonner";
  * Products Management Page
  * Displays and manages the product catalog
  */
+interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  images?: string[];
+  category_id: string;
+  category_name?: string;
+  inventory?: number;
+  sku?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+}
+
 export default function ProductsManagement() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 10;
 
@@ -36,9 +55,18 @@ export default function ProductsManagement() {
       setLoading(true);
       const data = await productService.getProducts();
       setProducts(data);
-      
-      // Extract unique categories
-      const uniqueCategories = Array.from(new Set(data.map(p => p.category)));
+
+      const uniqueCategories = Array.from(
+        new Map(
+          data
+            .filter((p) => p.category_id !== undefined && p.category_id !== null)
+            .map(p => [p.category_id, {
+              id: p.category_id,
+              name: p.category_name
+            }])
+        ).values()
+      );
+
       setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -64,13 +92,13 @@ export default function ProductsManagement() {
 
   // Filter products based on search and category
   const filteredProducts = products.filter(product => {
-    const matchesSearch = 
+    const matchesSearch =
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesCategory = 
-      selectedCategory === 'all' || product.category === selectedCategory;
+    const matchesCategory =
+      selectedCategory === 'all' || product.category_id === selectedCategory;
 
     return matchesSearch && matchesCategory;
   });
@@ -79,7 +107,7 @@ export default function ProductsManagement() {
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
   const startIndex = (currentPage - 1) * productsPerPage;
   const paginatedProducts = filteredProducts.slice(startIndex, startIndex + productsPerPage);
-  
+
   return (
     <AdminLayout>
       <div className="grid gap-6">
@@ -128,9 +156,12 @@ export default function ProductsManagement() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
+                    {categories.map((category, index) => (
+                      <SelectItem
+                        key={`${category.id}-${index}`}
+                        value={category.id}
+                      >
+                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -209,7 +240,7 @@ export default function ProductsManagement() {
                               {product.inventory}
                             </td>
                             <td className="p-4 align-middle">
-                              {product.category}
+                              {product.category_name || 'Uncategorized'}
                             </td>
                             <td className="p-4 align-middle text-right">
                               <div className="flex justify-end gap-2">
@@ -218,8 +249,8 @@ export default function ProductsManagement() {
                                     <Edit className="h-4 w-4" />
                                   </Link>
                                 </Button>
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   variant="ghost"
                                   onClick={() => handleDelete(product.id)}
                                 >
@@ -240,9 +271,9 @@ export default function ProductsManagement() {
                   </table>
                 </div>
                 <div className="flex justify-between items-center p-4">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   >
@@ -251,9 +282,9 @@ export default function ProductsManagement() {
                   <div className="text-sm text-muted-foreground">
                     Page {currentPage} of {Math.max(1, totalPages)}
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     disabled={currentPage >= totalPages}
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   >
