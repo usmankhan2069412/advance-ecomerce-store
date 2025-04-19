@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useRef /* Removed useRef */ } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
+import AddToCartButton from "@/components/AddToCartButton";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Heart, ShoppingBag, Eye, Leaf } from "lucide-react";
@@ -109,6 +110,7 @@ const ProductCard = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   // Get cart and favorites contexts
   const { addItem } = useCart();
@@ -258,7 +260,7 @@ const ProductCard = ({
       <Card className="w-80 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white ">
         <div className="relative h-96 w-full overflow-hidden group">
         <Image
-          src={image}
+          src={images && images.length > 0 ? images[0] : image}
           alt={name}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -296,7 +298,7 @@ const ProductCard = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="relative h-[400px] w-full">
                   <Image
-                    src={image}
+                    src={images && images.length > 0 ? images[activeImageIndex] : image}
                     alt={name}
                     fill
                     className="object-cover rounded-md"
@@ -308,10 +310,11 @@ const ProductCard = ({
                       {images.slice(0, 4).map((img, index) => (
                         <button
                           key={index}
-                          className={`w-12 h-12 border-2 rounded-md overflow-hidden ${img === image ? 'border-primary' : 'border-gray-200'}`}
+                          className={`w-12 h-12 border-2 rounded-md overflow-hidden ${index === activeImageIndex ? 'border-black' : 'border-gray-200'}`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            // This would update the main image in a real implementation
+                            // Update the active image index to show this image
+                            setActiveImageIndex(index);
                           }}
                         >
                           <div className="relative w-full h-full">
@@ -429,44 +432,17 @@ const ProductCard = ({
                   </div>
 
                   <div className="flex gap-3">
-                    <Button
+                    <AddToCartButton
+                      productId={id}
+                      productName={name}
+                      productPrice={price}
+                      productImage={image}
+                      sizes={sizes}
+                      colors={colors}
+                      inventory={inventory}
                       className="flex-1"
-                      onClick={(e) => {
-                        // Check if size is required but not selected
-                        if (sizes.length > 0 && !selectedSize) {
-                          toast.error("Please select a size");
-                          return;
-                        }
-
-                        // Check if color is required but not selected
-                        if (colors.length > 0 && !selectedColor) {
-                          toast.error("Please select a color");
-                          return;
-                        }
-
-                        // Add the product to the cart using the cart context
-                        addItem({
-                          id,
-                          name,
-                          price,
-                          quantity: 1,
-                          image,
-                          size: selectedSize,
-                          color: selectedColor
-                        });
-
-                        // Track the add to cart event for analytics
-                        trackAddToCart(id, name, price);
-
-                        // Show success message and close dialog
-                        toast.success(`${name} added to your bag!`);
-                        setIsDialogOpen(false);
-                      }}
-                      disabled={inventory === 0}
-                    >
-                      <ShoppingBag className="h-4 w-4 mr-2" />
-                      {inventory > 0 ? "Add to Bag" : "Out of Stock"}
-                    </Button>
+                      showQuantity={true}
+                    />
                     <ARButton
                       productId={id}
                       productName={name}
@@ -506,16 +482,18 @@ const ProductCard = ({
             <p className="text-xs text-orange-500">Only {inventory} left</p>
           )}
         </div>
-        <Button
+        <AddToCartButton
+          productId={id}
+          productName={name}
+          productPrice={price}
+          productImage={image}
+          sizes={sizes}
+          colors={colors}
+          inventory={inventory}
           size="sm"
           variant="outline"
           className="rounded-full"
-          onClick={handleAddToBag}
-          disabled={inventory === 0}
-        >
-          <ShoppingBag className="h-4 w-4 mr-2" />
-          {inventory > 0 ? "Add to Bag" : "Out of Stock"}
-        </Button>
+        />
       </CardFooter>
     </Card>
     </>

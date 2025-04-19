@@ -7,6 +7,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import { SonnerToaster } from '@/components/ui/sonner-toaster';
+import CartWrapper from '@/components/CartWrapper';
 
 
 const inter = Inter({ subsets: ["latin"] });
@@ -34,7 +35,9 @@ export default function RootLayout({
           <AuthProvider>
             <CartProvider>
               <FavoritesProvider>
-                {children}
+                <CartWrapper>
+                  {children}
+                </CartWrapper>
               </FavoritesProvider>
             </CartProvider>
           </AuthProvider>

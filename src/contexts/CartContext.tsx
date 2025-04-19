@@ -18,11 +18,15 @@ interface CartContextType {
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   applyPromoCode: (code: string) => void;
+  isCartOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
   subtotal: number;
   total: number;
   shippingCost: number;
   tax: number;
   promoCodeDiscount: number;
+  clearCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -30,6 +34,9 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   // Initialize with empty array to avoid hydration mismatch
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [promoCodeDiscount, setPromoCodeDiscount] = useState(0);
+  const shippingCost = 10; // Example fixed shipping cost
 
   // Load cart items from localStorage after component mounts
   useEffect(() => {
@@ -38,11 +45,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (savedCart) {
         setItems(JSON.parse(savedCart));
       }
+
+      // Load promo code discount
+      const savedDiscount = localStorage.getItem('promoDiscount');
+      if (savedDiscount) {
+        setPromoCodeDiscount(parseFloat(savedDiscount));
+      }
     }
   }, []);
-
-  const [promoCodeDiscount, setPromoCodeDiscount] = useState(0);
-  const shippingCost = 10; // Example fixed shipping cost
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -51,22 +61,46 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items]);
 
+  // Save promo code discount to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('promoDiscount', promoCodeDiscount.toString());
+    }
+  }, [promoCodeDiscount]);
+
+  // Open cart when items are added
+  const openCart = () => setIsCartOpen(true);
+  const closeCart = () => setIsCartOpen(false);
+
   const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
   const tax = subtotal * 0.1; // Example 10% tax rate
   const total = subtotal + shippingCost + tax - promoCodeDiscount;
 
   const addItem = (item: CartItem) => {
     setItems(currentItems => {
-      const existingItem = currentItems.find(i => i.id === item.id);
+      const existingItem = currentItems.find(i =>
+        i.id === item.id &&
+        i.size === item.size &&
+        i.color === item.color
+      );
+
       if (existingItem) {
         return currentItems.map(i =>
-          i.id === item.id
+          i.id === item.id && i.size === item.size && i.color === item.color
             ? { ...i, quantity: i.quantity + item.quantity }
             : i
         );
       }
       return [...currentItems, item];
     });
+
+    // Open cart when item is added
+    openCart();
+  };
+
+  const clearCart = () => {
+    setItems([]);
+    setPromoCodeDiscount(0);
   };
 
   const removeItem = (itemId: string) => {
@@ -99,11 +133,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeItem,
         updateQuantity,
         applyPromoCode,
+        isCartOpen,
+        openCart,
+        closeCart,
         subtotal,
         total,
         shippingCost,
         tax,
         promoCodeDiscount,
+        clearCart,
       }}
     >
       {children}

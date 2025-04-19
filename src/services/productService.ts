@@ -4,6 +4,9 @@ import supabase from '@/lib/supabase';
  * Product type definition
  */
 interface Product {
+  colors: never[];
+  sizes: string[];
+  isFavorite: boolean;
   id?: string;
   name: string;
   description?: string;
@@ -199,10 +202,10 @@ export const productService = {
   validateRequiredFields(product: Partial<Product>): void {
     const requiredFields = ['name', 'price', 'category_id', 'type'] as const;
     type RequiredField = typeof requiredFields[number];
-    
+
     const missingFields = requiredFields.filter(field => {
       const value = product[field as keyof Pick<Product, RequiredField>];
-      return !value || 
+      return !value ||
              (typeof value === 'string' && value.trim() === '') ||
              (field === 'price' && (typeof value !== 'number' || isNaN(value) || value <= 0));
     });
@@ -232,9 +235,10 @@ export const productService = {
       compare_at_price: product.compare_at_price,
       category_id: product.category_id!.trim(), //  instead of category
       type: product.type!.trim() as Product['type'],
-      image: product.image || (product.images && product.images.length > 0 
-        ? product.images[0] 
-        : 'https://placehold.co/600x400?text=No+Image'),
+      // Always set the main image from the first image in the images array if available
+      image: (product.images && product.images.length > 0)
+        ? product.images[0]
+        : (product.image || 'https://placehold.co/600x400?text=No+Image'),
       images: product.images,
       tags: product.tags,
       inventory: product.inventory,

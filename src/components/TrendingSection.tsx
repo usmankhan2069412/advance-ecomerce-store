@@ -26,9 +26,12 @@ const TrendingSection: React.FC<TrendingSectionProps> = ({
 
         console.log('TrendingSection: Fetching products...');
 
-        // IMPORTANT: Use the productService directly instead of productApi
-        // This ensures we get data even if the API is not available
-        const { productService } = await import('@/services/productService');
+        // Import both services
+        const [{ productService }, { default: supabase }] = await Promise.all([
+          import('@/services/productService'),
+          import('@/lib/supabase')
+        ]);
+
         const data = await productService.getProducts();
 
         console.log('TrendingSection: Received data:', data ? `${Array.isArray(data) ? data.length : 'not array'} items` : 'no data');
@@ -43,13 +46,13 @@ const TrendingSection: React.FC<TrendingSectionProps> = ({
             image: product.image || (product.images && product.images.length > 0 ? product.images[0] : 'https://placehold.co/600x400?text=No+Image'),
             images: product.images || [product.image || 'https://placehold.co/600x400?text=No+Image'],
             description: product.description || 'No description available',
-            sustainabilityScore: product.sustainabilityScore || 3,
-            isNew: product.isNew || product.is_new || false,
+            sustainabilityScore: product.sustainability_score || 3,
+            isNew: product.is_new || product.is_new || false,
             isFavorite: product.isFavorite || false,
-            category: product.category || 'Uncategorized',
+            category: product.category_name || 'Uncategorized',
             tags: Array.isArray(product.tags) ? product.tags : [],
             inventory: product.inventory || 10,
-            compareAtPrice: product.compareAtPrice || product.compare_at_price,
+            compareAtPrice: product.compare_at_price || product.compare_at_price,
             // Add default sizes if not provided
             sizes: product.sizes || ['S', 'M', 'L', 'XL'],
             // Add default colors if not provided
@@ -60,62 +63,9 @@ const TrendingSection: React.FC<TrendingSectionProps> = ({
           setProducts(processedData);
           setError(null);
         } else {
-          console.warn('TrendingSection: No valid products returned, generating demo products');
-
-          // Generate demo products if no products are returned
-          const demoProducts = [
-            {
-              id: `demo_${Date.now()}_1`,
-              name: 'Stylish Summer Dress',
-              price: 129.99,
-              image: 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=400&q=80',
-              images: ['https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=400&q=80'],
-              description: 'A beautiful dress perfect for summer occasions.',
-              sustainabilityScore: 4,
-              isNew: true,
-              isFavorite: false,
-              category: 'Clothing',
-              tags: ['dress', 'summer', 'casual'],
-              inventory: 15,
-              sizes: ['S', 'M', 'L', 'XL'],
-              colors: []
-            },
-            {
-              id: `demo_${Date.now()}_2`,
-              name: 'Classic Denim Jacket',
-              price: 89.99,
-              image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80',
-              images: ['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80'],
-              description: 'A timeless denim jacket that goes with everything.',
-              sustainabilityScore: 5,
-              isNew: true,
-              isFavorite: false,
-              category: 'Clothing',
-              tags: ['jacket', 'denim', 'casual'],
-              inventory: 8,
-              sizes: ['S', 'M', 'L', 'XL'],
-              colors: []
-            },
-            {
-              id: `demo_${Date.now()}_3`,
-              name: 'Designer Handbag',
-              price: 199.99,
-              image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80',
-              images: ['https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80'],
-              description: 'A stylish handbag for any occasion.',
-              sustainabilityScore: 3,
-              isNew: true,
-              isFavorite: false,
-              category: 'Accessories',
-              tags: ['bag', 'designer', 'luxury'],
-              inventory: 5,
-              sizes: [],
-              colors: []
-            }
-          ];
-
-          setProducts(demoProducts);
-          setError('Using demo products while we connect to our database.');
+          console.warn('TrendingSection: No valid products returned');
+          setProducts([]);
+          setError('No products found. Please try again later.');
         }
       } catch (err) {
         console.error('TrendingSection: Error fetching products:', err);

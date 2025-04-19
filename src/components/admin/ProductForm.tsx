@@ -11,6 +11,7 @@ import { Save, X, Upload, Plus, Trash } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import CategoryService from "@/services/categoryService";
+import AttributeService, { Attribute } from "@/services/attributeService";
 
 /**
  * Product form interface
@@ -19,6 +20,16 @@ interface ProductFormProps {
   initialData?: ProductFormData;
   onSubmit: (data: ProductFormData) => void;
   onCancel: () => void;
+}
+
+/**
+ * Product attribute value structure
+ */
+export interface ProductAttributeValue {
+  attribute_id: string;
+  attribute_name: string;
+  value_id: string;
+  value: string;
 }
 
 /**
@@ -36,6 +47,7 @@ export interface ProductFormData {
   tags: string[];
   inventory: number;
   sku: string;
+  attributes: ProductAttributeValue[];
   aiMatchScore?: number;
   aiRecommendationReason?: string;
 }
@@ -59,6 +71,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
       tags: [],
       inventory: 0,
       sku: "",
+      attributes: [],
       aiMatchScore: 0,
       aiRecommendationReason: "",
     }
@@ -69,6 +82,8 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [categories, setCategories] = useState<any[]>([]);
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string[]>>({});
 
   // Function to fetch categories
   const fetchCategories = async () => {
@@ -84,17 +99,47 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
     }
   };
 
-  // Load categories on component mount and refresh periodically
+  // Function to fetch attributes
+  const fetchAttributes = async () => {
+    try {
+      const attributeService = AttributeService.getInstance();
+      const data = await attributeService.getAttributes();
+      console.log('Fetched attributes:', data);
+      setAttributes(data || []);
+
+      // Initialize selected attributes from formData if editing
+      if (initialData?.attributes?.length) {
+        const selected: Record<string, string[]> = {};
+        initialData.attributes.forEach(attr => {
+          if (!selected[attr.attribute_id]) {
+            selected[attr.attribute_id] = [];
+          }
+          selected[attr.attribute_id].push(attr.value_id);
+        });
+        setSelectedAttributes(selected);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching attributes:', error);
+      setAttributes([]);
+      toast.error('Failed to load attributes. Please try again.');
+    }
+  };
+
+  // Load categories and attributes on component mount
   useEffect(() => {
     // Initial fetch
     fetchCategories();
+    fetchAttributes();
 
-    // Set up a refresh interval to keep categories in sync
-    // This ensures that if categories are added/removed elsewhere, the form will update
-    const intervalId = setInterval(fetchCategories, 5000); // Refresh every 5 seconds
+    // Set up a refresh interval to keep data in sync
+    const categoriesIntervalId = setInterval(fetchCategories, 5000); // Refresh every 5 seconds
+    const attributesIntervalId = setInterval(fetchAttributes, 5000); // Refresh every 5 seconds
 
-    // Clean up the interval when the component unmounts
-    return () => clearInterval(intervalId);
+    // Clean up the intervals when the component unmounts
+    return () => {
+      clearInterval(categoriesIntervalId);
+      clearInterval(attributesIntervalId);
+    };
   }, []);
 
   /**
@@ -152,25 +197,28 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
    * Handle image upload
    */
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    // In a real app, you would upload to a server
-    // For demo, we'll use a data URL
-    const reader = new FileReader();
-    reader.onload = () => {
-      const imageUrl = reader.result as string;
-      setImagePreview(imageUrl);
+    // Process each file
+    Array.from(files).forEach(file => {
+      // In a real app, you would upload to a server
+      // For demo, we'll use a data URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        const imageUrl = reader.result as string;
+        setImagePreview(imageUrl);
 
-      // Add to images array
-      setFormData({
-        ...formData,
-        images: [...formData.images, imageUrl]
-      });
+        // Add to images array
+        setFormData({
+          ...formData,
+          images: [...formData.images, imageUrl]
+        });
 
-      console.log('Image added to form data:', imageUrl.substring(0, 50) + '...');
-    };
-    reader.readAsDataURL(file);
+        console.log('Image added to form data:', imageUrl.substring(0, 50) + '...');
+      };
+      reader.readAsDataURL(file);
+    });
 
     // Reset the input
     e.target.value = '';
@@ -184,6 +232,61 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
       ...formData,
       images: formData.images.filter(image => image !== imageToRemove)
     });
+  };
+
+  /**
+   * Handle attribute selection
+   */
+  const handleAttributeChange = (attributeId: string, valueId: string, checked: boolean) => {
+    setSelectedAttributes(prev => {
+      const updated = { ...prev };
+
+      if (!updated[attributeId]) {
+        updated[attributeId] = [];
+      }
+
+      if (checked) {
+        // Add the value if it's not already in the array
+        if (!updated[attributeId].includes(valueId)) {
+          updated[attributeId] = [...updated[attributeId], valueId];
+        }
+      } else {
+        // Remove the value
+        updated[attributeId] = updated[attributeId].filter(id => id !== valueId);
+      }
+
+      return updated;
+    });
+  };
+
+  /**
+   * Convert selected attributes to ProductAttributeValue array
+   */
+  const prepareAttributesForSubmission = (): ProductAttributeValue[] => {
+    const result: ProductAttributeValue[] = [];
+
+    Object.entries(selectedAttributes).forEach(([attributeId, valueIds]) => {
+      const attribute = attributes.find(attr => attr.id === attributeId);
+      if (!attribute) return;
+
+      valueIds.forEach(valueId => {
+        const valueObj = attribute.values.find((val: any) => {
+          if (typeof val === 'string') return false; // Skip string values
+          return val.id === valueId;
+        });
+
+        if (!valueObj) return;
+
+        result.push({
+          attribute_id: attributeId,
+          attribute_name: attribute.name,
+          value_id: valueId,
+          value: valueObj.value
+        });
+      });
+    });
+
+    return result;
   };
 
   /**
@@ -284,10 +387,11 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
           formData.id = Date.now().toString();
         }
 
-        // Compress images before saving
+        // Prepare attributes and compress images before saving
         const compressedFormData = {
           ...formData,
-          images: compressImages(formData.images)
+          images: compressImages(formData.images),
+          attributes: prepareAttributesForSubmission()
         };
 
         // Let the productService handle localStorage
@@ -402,7 +506,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
               {formData.images.map((image, index) => (
                 <div key={index} className="relative aspect-square rounded-md border border-gray-200 bg-gray-50 ">
-                
+
                   <Image
                     src={image}
                     alt={`Product image ${index + 1}`}
@@ -429,6 +533,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                     id="image-upload"
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleImageUpload}
                     className="hidden"
                   />
@@ -465,7 +570,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                             value={category.id}      // Using ID as value
                             className="py-2 px-3 text-sm hover:bg-gray-100 cursor-pointer"
                           >
-                            {category.name}          
+                            {category.name}
                           </SelectItem>
                         ))
                       ) : (
@@ -552,6 +657,48 @@ const ProductForm = ({ initialData, onSubmit, onCancel }: ProductFormProps) => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Attributes */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Attributes</h3>
+
+            {attributes.length === 0 ? (
+              <div className="text-sm text-gray-500 italic">
+                No attributes available. <a href="/admin/attributes" className="text-primary underline">Create attributes</a> to add them to products.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                {attributes.map(attribute => (
+                  <div key={attribute.id} className="border rounded-md p-4">
+                    <h4 className="font-medium mb-2">{attribute.name}</h4>
+                    {attribute.description && (
+                      <p className="text-sm text-gray-500 mb-3">{attribute.description}</p>
+                    )}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {attribute.values.map((value: any, index: number) => {
+                        const valueId = typeof value === 'string' ? `value_${index}` : value.id;
+                        const valueText = typeof value === 'string' ? value : value.value;
+                        const isChecked = selectedAttributes[attribute.id]?.includes(valueId) || false;
+
+                        return (
+                          <label key={valueId} className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => handleAttributeChange(attribute.id, valueId, e.target.checked)}
+                              className="rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <span className="text-sm">{valueText}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Inventory */}

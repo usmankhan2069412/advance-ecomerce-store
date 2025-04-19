@@ -54,7 +54,7 @@ export default function ProductsManagement() {
     try {
       setLoading(true);
       const data = await productService.getProducts();
-      setProducts(data);
+      setProducts(data as Product[]);
 
       const uniqueCategories = Array.from(
         new Map(
@@ -67,7 +67,9 @@ export default function ProductsManagement() {
         ).values()
       );
 
-      setCategories(uniqueCategories);
+      setCategories(uniqueCategories.filter((category): category is Category => 
+        category.name !== undefined
+      ));
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('Failed to load products');
