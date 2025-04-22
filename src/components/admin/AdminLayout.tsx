@@ -42,7 +42,7 @@ interface AdminLayoutProps {
 const AdminLayout = ({ children }: AdminLayoutProps) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAdminAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
     products: false,
@@ -52,13 +52,13 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   // Check authentication and redirect if not authenticated
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAdminAuthenticated) {
       router.push("/admin/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isAdminAuthenticated, router]);
 
   // If not authenticated, don't render the admin layout
-  if (!isAuthenticated) {
+  if (!isAdminAuthenticated) {
     return null;
   }
 

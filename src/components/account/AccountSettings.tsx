@@ -72,36 +72,39 @@ export default function AccountSettings({
   return (
     <div className="space-y-6">
       {/* Password Change Section */}
-      <Card className="p-6">
+      <div className="mb-8">
         <div className="flex items-center gap-2 mb-4">
-          <Lock className="w-5 h-5 text-gray-600" />
-          <h3 className="text-lg font-medium">Change Password</h3>
+          <Lock className="w-5 h-5 text-[#2D2D2D]" />
+          <h3 className="text-lg font-medium font-serif text-[#2D2D2D]">Change Password</h3>
         </div>
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Current Password</label>
+            <label className="text-sm font-medium font-sans text-gray-700">Current Password</label>
             <Input
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
+              className="font-sans"
               required
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">New Password</label>
+            <label className="text-sm font-medium font-sans text-gray-700">New Password</label>
             <Input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
+              className="font-sans"
               required
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Confirm New Password</label>
+            <label className="text-sm font-medium font-sans text-gray-700">Confirm New Password</label>
             <Input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              className="font-sans"
               required
             />
           </div>
@@ -110,21 +113,27 @@ export default function AccountSettings({
               <AlertDescription>{passwordError}</AlertDescription>
             </Alert>
           )}
-          <Button type="submit">Update Password</Button>
+          <Button
+            type="submit"
+            className="bg-[#2D2D2D] hover:bg-[#1a1a1a] text-white font-sans flex items-center gap-2"
+          >
+            <Lock className="h-4 w-4" />
+            Update Password
+          </Button>
         </form>
-      </Card>
+      </div>
 
       {/* Email Preferences Section */}
-      <Card className="p-6">
+      <div className="mb-8">
         <div className="flex items-center gap-2 mb-6">
-          <Mail className="w-5 h-5 text-gray-600" />
-          <h3 className="text-lg font-medium">Email Preferences</h3>
+          <Mail className="w-5 h-5 text-[#2D2D2D]" />
+          <h3 className="text-lg font-medium font-serif text-[#2D2D2D]">Email Preferences</h3>
         </div>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <label className="text-sm font-medium">Order Updates</label>
-              <p className="text-sm text-gray-600">Receive updates about your orders</p>
+              <label className="text-sm font-medium font-sans text-[#2D2D2D]">Order Updates</label>
+              <p className="text-sm text-gray-600 font-sans">Receive updates about your orders</p>
             </div>
             <Switch
               checked={emailPreferences.orderUpdates}
@@ -134,8 +143,8 @@ export default function AccountSettings({
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <label className="text-sm font-medium">Product Alerts</label>
-              <p className="text-sm text-gray-600">Get notified about price drops and back in stock items</p>
+              <label className="text-sm font-medium font-sans text-[#2D2D2D]">Product Alerts</label>
+              <p className="text-sm text-gray-600 font-sans">Get notified about price drops and back in stock items</p>
             </div>
             <Switch
               checked={emailPreferences.productAlerts}
@@ -145,8 +154,8 @@ export default function AccountSettings({
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <label className="text-sm font-medium">Newsletter</label>
-              <p className="text-sm text-gray-600">Receive our weekly newsletter</p>
+              <label className="text-sm font-medium font-sans text-[#2D2D2D]">Newsletter</label>
+              <p className="text-sm text-gray-600 font-sans">Receive our weekly newsletter</p>
             </div>
             <Switch
               checked={emailPreferences.newsletter}
@@ -156,8 +165,8 @@ export default function AccountSettings({
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <label className="text-sm font-medium">Marketing</label>
-              <p className="text-sm text-gray-600">Receive marketing emails about our products and services</p>
+              <label className="text-sm font-medium font-sans text-[#2D2D2D]">Marketing</label>
+              <p className="text-sm text-gray-600 font-sans">Receive marketing emails about our products and services</p>
             </div>
             <Switch
               checked={emailPreferences.marketing}
@@ -165,7 +174,7 @@ export default function AccountSettings({
             />
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

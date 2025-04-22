@@ -32,7 +32,7 @@ interface ProductCardProps {
   sustainabilityScore?: number;
   isNew?: boolean;
   isFavorite?: boolean;
-  category?: string;
+  category_name?: string;
   tags?: string[];
   inventory?: number;
   sizes?: string[];
@@ -97,7 +97,7 @@ const ProductCard = ({
   sustainabilityScore = 3,
   isNew = false,
   isFavorite = false,
-  category = 'Uncategorized',
+  category_name = "",
   tags = [],
   inventory = 0,
   sizes = ['S', 'M', 'L', 'XL'],  // Default sizes
@@ -363,7 +363,7 @@ const ProductCard = ({
 
                     {/* Category and tags */}
                     <div className="mb-4">
-                      <p className="text-sm text-gray-500 mb-1">Category: <span className="text-gray-700">{category}</span></p>
+                      <p className="text-sm text-gray-500 mb-1">Category: <span className="text-gray-700">{category_name}</span></p>
                       {tags && tags.length > 0 && (
                         <div className="flex flex-wrap gap-1">
                           {tags.map((tag, index) => (
@@ -463,7 +463,7 @@ const ProductCard = ({
         </div>
 
         {/* Category */}
-        <p className="text-xs text-gray-500 mb-1">{category}</p>
+        <p className="text-xs text-gray-500 mb-1">{category_name}</p>
 
         {/* Description */}
         <p className="text-gray-600 text-sm line-clamp-2 mb-2">{description}</p>

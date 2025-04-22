@@ -1,6 +1,8 @@
 import type { Config } from "tailwindcss";
 
 const config = {
+  // Removed darkMode: false as it's deprecated
+  // Using CSS variables for theme switching instead
   content: [
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",

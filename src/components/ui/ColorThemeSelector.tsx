@@ -78,7 +78,7 @@ export function ColorThemeSelector({
               "relative flex flex-col items-center p-2 rounded-md border transition-all",
               selectedTheme.name === theme.name
                 ? "border-accent-gold ring-2 ring-accent-gold ring-opacity-50"
-                : "border-gray-200 dark:border-gray-700 hover:border-accent-gold",
+                : "border-gray-200 hover:border-accent-gold",
             )}
             aria-label={`Select ${theme.name} theme`}
           >

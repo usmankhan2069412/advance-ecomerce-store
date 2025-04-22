@@ -38,9 +38,9 @@
 }
 
 .skeleton {
-  background: linear-gradient(90deg, 
-    var(--skeleton-start) 0%, 
-    var(--skeleton-middle) 50%, 
+  background: linear-gradient(90deg,
+    var(--skeleton-start) 0%,
+    var(--skeleton-middle) 50%,
     var(--skeleton-end) 100%
   );
   background-size: 200% 100%;
@@ -74,7 +74,7 @@
   --skeleton-end: #f0f0f0;
 }
 
-.dark {
+[data-theme="dark"] {
   --skeleton-start: #2a2a2a;
   --skeleton-middle: #333333;
   --skeleton-end: #2a2a2a;

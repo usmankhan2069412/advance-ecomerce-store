@@ -1,4 +1,4 @@
-import supabase from '@/lib/supabase';
+import { supabase } from '@/lib/supabase-client';
 
 /**
  * Attribute type definition
@@ -102,7 +102,7 @@ class AttributeService {
     try {
       const storedAttributes = localStorage.getItem('attributes');
       if (!storedAttributes) return [];
-      
+
       return JSON.parse(storedAttributes);
     } catch (error) {
       console.error('Error reading attributes from localStorage:', error);
@@ -163,7 +163,7 @@ class AttributeService {
     try {
       const storedAttributes = localStorage.getItem('attributes');
       if (!storedAttributes) return null;
-      
+
       const attributes = JSON.parse(storedAttributes) as Attribute[];
       return attributes.find(attr => attr.id === id) || null;
     } catch (error) {
@@ -184,7 +184,7 @@ class AttributeService {
 
       // Generate a unique ID
       const attributeId = `attr_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      
+
       // Prepare attribute data
       const attributeData = {
         id: attributeId,
@@ -198,7 +198,7 @@ class AttributeService {
 
       // Extract values to insert separately
       const values = attribute.values || [];
-      
+
       // Try to insert into Supabase
       const { data, error } = await supabase
         .from('attributes')
@@ -214,7 +214,7 @@ class AttributeService {
 
       // If we successfully created the attribute, insert the values
       if (data && values.length > 0) {
-        const valueObjects = Array.isArray(values) 
+        const valueObjects = Array.isArray(values)
           ? values.map((value, index) => {
               if (typeof value === 'string') {
                 return {
@@ -265,14 +265,14 @@ class AttributeService {
    * Create attribute in localStorage
    */
   private createAttributeInLocalStorage(
-    attributeData: Partial<Attribute>, 
+    attributeData: Partial<Attribute>,
     values: (string | AttributeValue)[]
   ): Attribute {
     try {
       // Get existing attributes
       const storedAttributes = localStorage.getItem('attributes');
       const attributes = storedAttributes ? JSON.parse(storedAttributes) : [];
-      
+
       // Process values
       const processedValues = values.map((value, index) => {
         if (typeof value === 'string') {
@@ -285,18 +285,18 @@ class AttributeService {
         }
         return value;
       });
-      
+
       // Create new attribute with values
       const newAttribute = {
         ...attributeData,
         values: processedValues,
         product_count: 0
       };
-      
+
       // Add to array and save
       attributes.push(newAttribute);
       localStorage.setItem('attributes', JSON.stringify(attributes));
-      
+
       return newAttribute as Attribute;
     } catch (error) {
       console.error('Error creating attribute in localStorage:', error);
@@ -351,7 +351,7 @@ class AttributeService {
         }
 
         // Then insert new values
-        const valueObjects = Array.isArray(updates.values) 
+        const valueObjects = Array.isArray(updates.values)
           ? updates.values.map((value, index) => {
               if (typeof value === 'string') {
                 return {
@@ -416,7 +416,7 @@ class AttributeService {
    * Update attribute in localStorage
    */
   private updateAttributeInLocalStorage(
-    id: string, 
+    id: string,
     attributeData: Partial<Attribute>,
     values?: (string | AttributeValue)[]
   ): Attribute | null {
@@ -424,12 +424,12 @@ class AttributeService {
       // Get existing attributes
       const storedAttributes = localStorage.getItem('attributes');
       if (!storedAttributes) return null;
-      
+
       const attributes = JSON.parse(storedAttributes) as Attribute[];
       const attributeIndex = attributes.findIndex(attr => attr.id === id);
-      
+
       if (attributeIndex === -1) return null;
-      
+
       // Process values if provided
       let processedValues = attributes[attributeIndex].values;
       if (values && values.length > 0) {
@@ -445,7 +445,7 @@ class AttributeService {
           return value;
         });
       }
-      
+
       // Update attribute
       const updatedAttribute = {
         ...attributes[attributeIndex],
@@ -453,10 +453,10 @@ class AttributeService {
         values: processedValues,
         updated_at: new Date().toISOString()
       };
-      
+
       attributes[attributeIndex] = updatedAttribute;
       localStorage.setItem('attributes', JSON.stringify(attributes));
-      
+
       return updatedAttribute as Attribute;
     } catch (error) {
       console.error(`Error updating attribute ${id} in localStorage:`, error);
@@ -507,15 +507,15 @@ class AttributeService {
       // Get existing attributes
       const storedAttributes = localStorage.getItem('attributes');
       if (!storedAttributes) return false;
-      
+
       const attributes = JSON.parse(storedAttributes) as Attribute[];
       const filteredAttributes = attributes.filter(attr => attr.id !== id);
-      
+
       if (filteredAttributes.length === attributes.length) {
         // No attribute was removed
         return false;
       }
-      
+
       localStorage.setItem('attributes', JSON.stringify(filteredAttributes));
       return true;
     } catch (error) {

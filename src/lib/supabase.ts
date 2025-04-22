@@ -87,5 +87,10 @@ class SupabaseClient {
   }
 }
 
-// Export an async function that returns the Supabase client
-export default await SupabaseClient.getInstance();
+// Export a function that returns a promise to the Supabase client
+export default {
+  getClient: () => SupabaseClient.getInstance()
+};
+
+// For backward compatibility, also export a function to get the client
+export const getSupabaseClient = () => SupabaseClient.getInstance();

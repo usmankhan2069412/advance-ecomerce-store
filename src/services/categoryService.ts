@@ -1,4 +1,4 @@
-import supabase from '@/lib/supabase';
+import { supabase } from '@/lib/supabase-client';
 
 class CategoryService {
   private static instance: CategoryService;
@@ -14,7 +14,7 @@ class CategoryService {
   }
 
   private static async initialize(): Promise<CategoryService> {
-    await supabase;
+    // No need to await supabase anymore since it's directly imported
     return new CategoryService();
   }
 

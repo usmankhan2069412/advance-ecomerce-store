@@ -2,38 +2,48 @@
 
 const nextConfig = {
     images: {
-        domains: [
-            'images.unsplash.com',
-            'lbmatrvcyiefxukntwsu.supabase.co'
+        remotePatterns: [
+          {
+            protocol: 'https',
+            hostname: 'images.unsplash.com',
+          },
+          {
+            protocol: 'https',
+            hostname: 'lbmatrvcyiefxukntwsu.supabase.co',
+          },
         ],
-    },
+      },
+
     reactStrictMode: true,
-    webpack: (config, { isServer }) => {
-        // Optimize chunk loading
-        config.optimization.splitChunks = {
-            chunks: 'all',
-            minSize: 20000,
-            maxSize: 70000,
-            cacheGroups: {
-                default: false,
-                vendors: false,
-                commons: {
-                    name: 'commons',
-                    chunks: 'all',
-                    minChunks: 2,
-                    reuseExistingChunk: true,
-                },
-                shared: {
-                    name: (module, chunks) => {
-                        return `shared-${chunks.map(c => c.name).join('-')}`
+    webpack: (config, { dev }) => {
+        // Only apply custom chunk splitting in production
+        if (!dev) {
+            // Optimize chunk loading
+            config.optimization.splitChunks = {
+                chunks: 'all',
+                minSize: 20000,
+                maxSize: 70000,
+                cacheGroups: {
+                    default: false,
+                    vendors: false,
+                    commons: {
+                        name: 'commons',
+                        chunks: 'all',
+                        minChunks: 2,
+                        reuseExistingChunk: true,
                     },
-                    test: /[\\/]node_modules[\\/]/,
-                    chunks: 'all',
-                    minChunks: 2,
-                    reuseExistingChunk: true,
+                    shared: {
+                        name: (_, chunks) => {
+                            return `shared-${chunks.map(c => c.name).join('-')}`
+                        },
+                        test: /[\\/]node_modules[\\/]/,
+                        chunks: 'all',
+                        minChunks: 2,
+                        reuseExistingChunk: true,
+                    }
                 }
-            }
-        };
+            };
+        }
         return config;
     },
     experimental: {

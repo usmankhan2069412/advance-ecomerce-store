@@ -14,15 +14,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useCart } from "@/contexts/CartContext";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Import useFavorites conditionally to prevent errors
-let useFavorites: () => { favorites: any[]; addFavorite: any; removeFavorite: any; isFavorite: any; };
-try {
-  useFavorites = require("@/contexts/FavoritesContext").useFavorites;
-} catch (error) {
-  // Fallback for when FavoritesContext is not available
-  useFavorites = () => ({ favorites: [], addFavorite: () => {}, removeFavorite: () => {}, isFavorite: () => false });
-}
+// Import from a separate utility file to avoid circular dependencies
+import { useFavorites } from "@/contexts/FavoritesContext";
 
 interface HeaderProps {
   transparent?: boolean;
@@ -32,6 +27,7 @@ const Header = ({ transparent = false }: HeaderProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const { items, removeItem, updateQuantity } = useCart();
   const router = useRouter();
+  const { isAuthenticated, userProfile, logout } = useAuth();
 
   // Safely use favorites context
   let favorites: any[] = [];
@@ -100,9 +96,64 @@ const Header = ({ transparent = false }: HeaderProps) => {
       </div>
 
       <div className="flex items-center space-x-2">
-        <Button variant="ghost" size="sm">
-          <User className="h-5 w-5" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="relative">
+              <User className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 p-2 bg-white">
+            {isAuthenticated ? (
+              <>
+                <div className="px-2 py-1.5 mb-1">
+                  <p className="text-sm font-medium">Hello, {userProfile?.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{userProfile?.email}</p>
+                </div>
+                <DropdownMenuItem>
+                  <button
+                    onClick={() => router.push('/account')}
+                    className="w-full text-left cursor-pointer"
+                  >
+                    My Account
+                  </button>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/orders" className="cursor-pointer">
+                    My Orders
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <button
+                    onClick={() => logout()}
+                    className="w-full text-left cursor-pointer"
+                  >
+                    Logout
+                  </button>
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <>
+                <DropdownMenuItem asChild>
+                  <Link href="/auth" className="cursor-pointer">
+                    Login
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/auth"
+                    className="cursor-pointer"
+                    onClick={() => {
+                      // Set a query parameter to open the signup tab
+                      router.push('/auth?tab=signup');
+                    }}
+                  >
+                    Create Account
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <Button
           variant="ghost"

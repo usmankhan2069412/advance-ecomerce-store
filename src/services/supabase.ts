@@ -1,2 +1,2 @@
-// This file is deprecated. Please use @/lib/supabase.ts instead
-export { default as supabase } from '@/lib/supabase';
+// This file is deprecated. Please use @/lib/supabase-client.ts instead
+export { supabase } from '@/lib/supabase-client';

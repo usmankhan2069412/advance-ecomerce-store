@@ -8,6 +8,7 @@ import { CartProvider } from '@/contexts/CartContext';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import { SonnerToaster } from '@/components/ui/sonner-toaster';
 import CartWrapper from '@/components/CartWrapper';
+import AuthStateSync from '@/components/AuthStateSync';
 
 
 const inter = Inter({ subsets: ["latin"] });
@@ -33,6 +34,7 @@ export default function RootLayout({
       <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
       <body className={`${inter.className} antialiased bg-white text-gray-900`}>
           <AuthProvider>
+            <AuthStateSync />
             <CartProvider>
               <FavoritesProvider>
                 <CartWrapper>

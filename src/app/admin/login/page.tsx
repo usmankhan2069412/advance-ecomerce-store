@@ -16,7 +16,7 @@ import Image from "next/image";
  */
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { isAuthenticated, login } = useAuth();
+  const { isAdminAuthenticated, adminLogin } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,10 +24,10 @@ export default function AdminLoginPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAdminAuthenticated) {
       router.push("/admin");
     }
-  }, [isAuthenticated, router]);
+  }, [isAdminAuthenticated, router]);
 
   /**
    * Handle login form submission
@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
+      const success = await adminLogin(email, password);
 
       if (success) {
         router.push("/admin");

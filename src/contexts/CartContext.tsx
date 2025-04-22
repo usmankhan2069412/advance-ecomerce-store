@@ -31,7 +31,8 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: ReactNode }) {
+// Use named function with explicit return type
+export function CartProvider({ children }: { children: ReactNode }): JSX.Element {
   // Initialize with empty array to avoid hydration mismatch
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);

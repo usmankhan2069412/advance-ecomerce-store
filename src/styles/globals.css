@@ -98,8 +98,8 @@
   }
 }
 
-/* Dark mode styles */
-.dark {
+/* Theme variations - use CSS variables instead of dark mode classes */
+[data-theme="dark"] {
   --color-primary: #f8f4e3;
   --color-secondary: #1a1a1a;
   --color-accent-gold: #f0c75e;

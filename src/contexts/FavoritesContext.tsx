@@ -19,10 +19,11 @@ interface FavoritesContextType {
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
-export function FavoritesProvider({ children }: { children: ReactNode }) {
+// Use named function with explicit return type
+export function FavoritesProvider({ children }: { children: ReactNode }): JSX.Element {
   // Initialize with empty array to avoid hydration mismatch
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
-  
+
   // Load favorites from localStorage after component mounts
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -51,7 +52,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   };
 
   const removeFavorite = (itemId: string) => {
-    setFavorites(currentFavorites => 
+    setFavorites(currentFavorites =>
       currentFavorites.filter(item => item.id !== itemId)
     );
   };
@@ -74,7 +75,8 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useFavorites() {
+// Use named function with explicit return type
+export function useFavorites(): FavoritesContextType {
   const context = useContext(FavoritesContext);
   if (context === undefined) {
     throw new Error('useFavorites must be used within a FavoritesProvider');

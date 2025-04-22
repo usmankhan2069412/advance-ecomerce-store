@@ -1,5 +1,4 @@
-import React from "react";
-import Header from "@/components/Header";
+import React, { Suspense } from "react";
 import HeaderWrapper from "@/components/HeaderWrapper";
 import HeroSection from "@/components/HeroSection";
 import AISearchBar from "@/components/AISearchBar";
@@ -9,17 +8,15 @@ import SustainabilityIndicator from "@/components/SustainabilityIndicator";
 import Footer from "@/components/Footer";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
-import { Suspense } from "react";
-import { initAnalytics, trackPageView } from "@/lib/analytics";
+// Import the client component
+import NewsletterForm from "@/components/NewsletterForm";
+import AnalyticsInitializer from "@/components/AnalyticsInitializer";
 
+// Server component
 export default function Home() {
-  // Initialize analytics on client side
-  if (typeof window !== "undefined") {
-    initAnalytics();
-    trackPageView("Home");
-  }
   return (
     <ErrorBoundary>
+      <AnalyticsInitializer />
       <main className="min-h-screen bg-white">
         {/* Header with transparent background for hero section */}
         <HeaderWrapper transparent={true} />
@@ -132,16 +129,7 @@ export default function Home() {
               Subscribe for personalized AI style recommendations and exclusive
               early access to new collections.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Your email address"
-                className="px-4 py-3 rounded-md bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-white/50 flex-grow"
-              />
-              <button className="px-6 py-3 bg-white text-black font-medium rounded-md hover:bg-gray-200 transition-colors">
-                Subscribe
-              </button>
-            </div>
+            <NewsletterForm />
           </div>
         </section>
 
