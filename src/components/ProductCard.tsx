@@ -19,8 +19,10 @@ import { ARButton } from "@/components/ui/ARButton";
 import { ProductView3D } from "@/components/ui/ProductView3D";
 import { trackProductView, trackAddToCart } from "@/lib/analytics";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { toast } from "sonner";
+import LoginPopup from "./LoginPopup";
 
 interface ProductCardProps {
   id: string;
@@ -114,15 +116,25 @@ const ProductCard = ({
 
   // Get cart and favorites contexts
   const { addItem } = useCart();
+  const { isAuthenticated } = useAuth();
   const { addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites();
 
-  // State for size selection dialog
+  // State for dialogs
   const [showSizeDialog, setShowSizeDialog] = useState(false);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'favorite' | 'cart' | null>(null);
 
   // Handle adding to bag
   const handleAddToBag = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      setPendingAction('cart');
+      setShowLoginPopup(true);
+      return;
+    }
 
     // If product has sizes, show the size selection dialog
     if (sizes && sizes.length > 0) {
@@ -169,6 +181,13 @@ const ProductCard = ({
     e.preventDefault();
     e.stopPropagation();
 
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      setPendingAction('favorite');
+      setShowLoginPopup(true);
+      return;
+    }
+
     // Use the favorites context to toggle favorite status
     if (checkIsFavorite(id)) {
       removeFavorite(id);
@@ -188,8 +207,48 @@ const ProductCard = ({
     onFavoriteToggle(id, !checkIsFavorite(id));
   };
 
+  // Function to handle successful login
+  const handleLoginSuccess = () => {
+    // After successful login, perform the pending action
+    if (pendingAction === 'favorite') {
+      // Add to favorites
+      addFavorite({
+        id,
+        name,
+        price,
+        image,
+        description
+      });
+      toast.success(`${name} added to favorites`);
+      onFavoriteToggle(id, true);
+    } else if (pendingAction === 'cart') {
+      // Show size dialog or add to cart directly
+      if (sizes && sizes.length > 0) {
+        setShowSizeDialog(true);
+      } else {
+        addToCart();
+      }
+    }
+
+    // Reset pending action
+    setPendingAction(null);
+  };
+
   return (
     <>
+      {/* Login Popup */}
+      <LoginPopup
+        isOpen={showLoginPopup}
+        onClose={() => {
+          setShowLoginPopup(false);
+          setPendingAction(null);
+        }}
+        onSuccess={handleLoginSuccess}
+        message={pendingAction === 'favorite' ?
+          "Please log in to add items to your favorites" :
+          "Please log in to add items to your bag"}
+      />
+
       {/* Size Selection Dialog */}
       {showSizeDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

@@ -7,6 +7,7 @@ export interface UserProfile {
   avatar_url?: string;
   phone?: string;
   address?: string;
+  profile_user_id?: number; // ID from the profile_users table
 }
 
 export interface AuthError {
@@ -520,12 +521,14 @@ export class AuthService {
         return { user: null, error: null }; // No error, just no user
       }
 
-      // Get the user profile
-      let profileData: any = null;
+      const userId = sessionData.session.user.id;
+
+      // Get the basic profile data
+      let basicProfileData: any = null;
       const { data: initialProfileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', sessionData.session.user.id)
+        .eq('id', userId)
         .maybeSingle();
 
       if (profileError) {
@@ -533,12 +536,12 @@ export class AuthService {
         // Continue despite error
       }
 
-      // Set profileData to the initial result
-      profileData = initialProfileData;
+      // Set basicProfileData to the initial result
+      basicProfileData = initialProfileData;
 
       // If profile doesn't exist, create it automatically
-      if (!profileData) {
-        console.log('Profile not found for current user, creating one:', sessionData.session.user.id);
+      if (!basicProfileData) {
+        console.log('Profile not found for current user, creating one:', userId);
 
         try {
           // Get user metadata or use defaults
@@ -549,7 +552,7 @@ export class AuthService {
             .from('profiles')
             .upsert([
               {
-                id: sessionData.session.user.id,
+                id: userId,
                 name: name,
                 email: sessionData.session.user.email,
                 created_at: new Date().toISOString(),
@@ -566,12 +569,12 @@ export class AuthService {
           const { data: newProfileData } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', sessionData.session.user.id)
+            .eq('id', userId)
             .maybeSingle();
 
           if (newProfileData) {
             // Use the new profile data
-            profileData = newProfileData;
+            basicProfileData = newProfileData;
           }
         } catch (err) {
           console.error('Unexpected error creating profile in getCurrentUser:', err);
@@ -579,12 +582,70 @@ export class AuthService {
       }
 
       // If we still don't have a profile, create a minimal one from auth data
-      if (!profileData) {
-        profileData = {
-          id: sessionData.session.user.id,
+      if (!basicProfileData) {
+        basicProfileData = {
+          id: userId,
           name: sessionData.session.user.user_metadata?.name || 'User',
           email: sessionData.session.user.email,
           avatar_url: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+
+      // Now get the extended profile data from profile_users
+      const { data: profileUserData, error: profileUserError } = await supabase
+        .from('profile_users')
+        .select('*')
+        .eq('profile_id', userId)
+        .maybeSingle();
+
+      if (profileUserError) {
+        console.error('Error fetching profile_users in getCurrentUser:', profileUserError);
+        // Continue despite error - we'll use defaults
+      }
+
+      // If profile_users doesn't exist, create it
+      let extendedProfileData = profileUserData;
+      if (!extendedProfileData) {
+        console.log('profile_users not found for user, creating one:', userId);
+
+        try {
+          // Create profile_users entry
+          const { data: newProfileUser, error: createExtendedError } = await supabase
+            .from('profile_users')
+            .insert([
+              {
+                profile_id: userId,
+                name: basicProfileData.name,
+                email: basicProfileData.email,
+                phone: '',
+                address: '',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+            ])
+            .select()
+            .single();
+
+          if (createExtendedError) {
+            console.error('Error creating profile_users in getCurrentUser:', createExtendedError);
+            // Continue despite error
+          } else {
+            extendedProfileData = newProfileUser;
+          }
+        } catch (err) {
+          console.error('Unexpected error creating profile_users in getCurrentUser:', err);
+        }
+      }
+
+      // If we still don't have extended profile data, use defaults
+      if (!extendedProfileData) {
+        extendedProfileData = {
+          id: 0, // Placeholder ID
+          profile_id: userId,
+          name: basicProfileData.name,
+          email: basicProfileData.email,
           phone: '',
           address: '',
           created_at: new Date().toISOString(),
@@ -592,14 +653,15 @@ export class AuthService {
         };
       }
 
-      // Return the user profile
+      // Return the combined user profile
       const userProfile: UserProfile = {
-        id: profileData.id,
-        name: profileData.name,
-        email: profileData.email,
-        avatar_url: profileData.avatar_url,
-        phone: profileData.phone || '',
-        address: profileData.address || ''
+        id: basicProfileData.id,
+        name: basicProfileData.name,
+        email: basicProfileData.email,
+        avatar_url: basicProfileData.avatar_url,
+        phone: extendedProfileData.phone || '',
+        address: extendedProfileData.address || '',
+        profile_user_id: extendedProfileData.id
       };
 
       return { user: userProfile, error: null };
@@ -731,34 +793,184 @@ export class AuthService {
    * @param profile Profile data to update
    * @returns Updated profile or error
    */
+  /**
+   * Helper method to get table columns
+   * @param tableName Table name to check
+   * @returns Array of column names
+   */
+  private static async getTableColumns(tableName: string): Promise<string[]> {
+    try {
+      // Try using the RPC function first
+      const { data: tableInfo, error: tableError } = await supabase
+        .rpc('get_table_columns', { table_name: tableName });
+
+      if (!tableError && tableInfo) {
+        return tableInfo.map((col: any) => col.column_name);
+      }
+
+      // If RPC fails, try a direct query to information_schema
+      console.log('RPC method failed, trying direct query...');
+      const { data: columns, error: queryError } = await supabase
+        .from('information_schema.columns')
+        .select('column_name')
+        .eq('table_schema', 'public')
+        .eq('table_name', tableName);
+
+      if (!queryError && columns) {
+        return columns.map((col: any) => col.column_name);
+      }
+
+      // If all else fails, return default columns
+      console.warn('Could not get table columns, using defaults');
+      return ['id', 'name', 'email', 'avatar_url', 'created_at', 'updated_at'];
+    } catch (error) {
+      console.error('Error getting table columns:', error);
+      return ['id', 'name', 'email', 'avatar_url', 'created_at', 'updated_at'];
+    }
+  }
+
   static async updateProfile(
     userId: string,
     profile: Partial<UserProfile>
   ): Promise<{ user: UserProfile | null; error: AuthError | null }> {
     try {
-      const updates = {
-        ...profile,
-        updated_at: new Date().toISOString(),
-      };
+      // First, update the basic profile information in the profiles table
+      const basicProfileUpdates: any = {};
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', userId)
-        .select()
-        .single();
-
-      if (error) {
-        return { user: null, error: { message: error.message, code: error.code } };
+      // Only update name in the profiles table
+      if (profile.name) {
+        basicProfileUpdates.name = profile.name;
+        basicProfileUpdates.updated_at = new Date().toISOString();
       }
 
+      // Update the profiles table if we have basic profile updates
+      if (Object.keys(basicProfileUpdates).length > 0) {
+        console.log('Updating basic profile with:', basicProfileUpdates);
+
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(basicProfileUpdates)
+          .eq('id', userId);
+
+        if (profileError) {
+          console.error('Error updating basic profile:', profileError);
+          return { user: null, error: { message: profileError.message, code: profileError.code } };
+        }
+      }
+
+      // Now, check if the user has a profile_users entry
+      const { data: profileUserData, error: profileUserError } = await supabase
+        .from('profile_users')
+        .select('*')
+        .eq('profile_id', userId)
+        .maybeSingle();
+
+      if (profileUserError) {
+        console.error('Error checking profile_users:', profileUserError);
+        return { user: null, error: { message: profileUserError.message, code: profileUserError.code } };
+      }
+
+      // Prepare the profile_users updates
+      const profileUserUpdates: any = {};
+
+      // Add all the fields we want to update
+      if (profile.name) profileUserUpdates.name = profile.name;
+      if (profile.phone !== undefined) profileUserUpdates.phone = profile.phone;
+      if (profile.address !== undefined) profileUserUpdates.address = profile.address;
+      profileUserUpdates.updated_at = new Date().toISOString();
+
+      let profileUserId: number | null = null;
+
+      // If the user doesn't have a profile_users entry, create one
+      if (!profileUserData) {
+        console.log('Creating new profile_users entry for user:', userId);
+
+        // Get the user's email from the profiles table
+        const { data: profileData, error: getProfileError } = await supabase
+          .from('profiles')
+          .select('email, name')
+          .eq('id', userId)
+          .single();
+
+        if (getProfileError) {
+          console.error('Error getting profile data:', getProfileError);
+          return { user: null, error: { message: getProfileError.message, code: getProfileError.code } };
+        }
+
+        // Create a new profile_users entry
+        const { data: newProfileUser, error: insertError } = await supabase
+          .from('profile_users')
+          .insert([
+            {
+              profile_id: userId,
+              name: profile.name || profileData.name,
+              email: profileData.email,
+              phone: profile.phone || '',
+              address: profile.address || '',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }
+          ])
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating profile_users entry:', insertError);
+          return { user: null, error: { message: insertError.message, code: insertError.code } };
+        }
+
+        profileUserId = newProfileUser.id;
+      } else {
+        // Update the existing profile_users entry
+        console.log('Updating profile_users entry:', profileUserData.id);
+        console.log('With data:', profileUserUpdates);
+
+        const { error: updateError } = await supabase
+          .from('profile_users')
+          .update(profileUserUpdates)
+          .eq('id', profileUserData.id);
+
+        if (updateError) {
+          console.error('Error updating profile_users:', updateError);
+          return { user: null, error: { message: updateError.message, code: updateError.code } };
+        }
+
+        profileUserId = profileUserData.id;
+      }
+
+      // Get the updated user data
+      const { data: updatedProfileUser, error: getUpdatedError } = await supabase
+        .from('profile_users')
+        .select('*')
+        .eq('profile_id', userId)
+        .single();
+
+      if (getUpdatedError) {
+        console.error('Error getting updated profile_users:', getUpdatedError);
+        return { user: null, error: { message: getUpdatedError.message, code: getUpdatedError.code } };
+      }
+
+      // Get the basic profile data
+      const { data: basicProfile, error: getBasicError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (getBasicError) {
+        console.error('Error getting basic profile:', getBasicError);
+        return { user: null, error: { message: getBasicError.message, code: getBasicError.code } };
+      }
+
+      // Create a combined user profile object
       const userProfile: UserProfile = {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        avatar_url: data.avatar_url,
-        phone: data.phone || '',
-        address: data.address || ''
+        id: userId,
+        name: updatedProfileUser.name || basicProfile.name,
+        email: basicProfile.email,
+        avatar_url: basicProfile.avatar_url || null,
+        phone: updatedProfileUser.phone || '',
+        address: updatedProfileUser.address || '',
+        profile_user_id: updatedProfileUser.id
       };
 
       return { user: userProfile, error: null };

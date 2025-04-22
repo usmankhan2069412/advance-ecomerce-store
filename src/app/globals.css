@@ -25,7 +25,7 @@
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
     --radius: 0.5rem;
-    
+
   }
 }
 
@@ -36,5 +36,24 @@
   body {
     background-color: hsl(var(--background-white));
     color: hsl(var(--foreground));
+  }
+}
+
+/* Custom styles */
+@layer components {
+  /* Remove hover effect from buttons with no-hover class */
+  .no-hover {
+    @apply hover:bg-transparent !important;
+  }
+
+  /* Ensure icons in header are always white */
+  .no-hover svg,
+  .icon-container svg {
+    @apply text-white !important;
+  }
+
+  /* Override any hover effects on icon buttons */
+  .no-hover:hover {
+    @apply bg-transparent !important;
   }
 }

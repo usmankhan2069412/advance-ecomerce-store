@@ -95,11 +95,16 @@ const Header = ({ transparent = false }: HeaderProps) => {
         </nav>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 icon-container">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="relative">
-              <User className="h-5 w-5" />
+            <Button variant="ghost" size="sm" className="relative no-hover">
+              {favoritesCount > 0 && (
+                <span className="absolute -top-1 -right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {favoritesCount}
+                </span>
+              )}
+              <User className="h-5 w-5 text-white" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 p-2 bg-white">
@@ -155,27 +160,12 @@ const Header = ({ transparent = false }: HeaderProps) => {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="relative"
-          onClick={() => router.push('/favorites')}
-          aria-label={`Favorites with ${favoritesCount} items`}
-        >
-          {favoritesCount > 0 && (
-            <span className="absolute -top-1 -right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {favoritesCount}
-            </span>
-          )}
-          <Heart className="h-5 w-5" />
-        </Button>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              className="relative"
+              className="relative no-hover"
               aria-label={`Shopping cart with ${cartItemsCount} items`}
             >
               {cartItemsCount > 0 && (
@@ -183,7 +173,7 @@ const Header = ({ transparent = false }: HeaderProps) => {
                   {cartItemsCount}
                 </span>
               )}
-              <ShoppingBag className="h-5 w-5" />
+              <ShoppingBag className="h-5 w-5 text-white" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80 p-4 bg-white">
@@ -289,8 +279,8 @@ const Header = ({ transparent = false }: HeaderProps) => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="md">
-              <Menu className="h-5 w-5" />
+            <Button variant="ghost" size="md" className="no-hover">
+              <Menu className="h-5 w-5 text-white" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 bg-white">

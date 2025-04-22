@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
 import { AuthService } from '@/services/auth-service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
@@ -35,6 +36,7 @@ const sans = Inter({
 export default function AccountDashboard() {
   const router = useRouter();
   const { isAuthenticated, userProfile, logout, resendConfirmationEmail, isLoading } = useAuth();
+  const { favorites, removeFavorite } = useFavorites();
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [profile, setProfile] = useState({
     name: '',
@@ -49,13 +51,30 @@ export default function AccountDashboard() {
   // Load user profile data
   useEffect(() => {
     if (userProfile) {
+      console.log('Loading user profile data:', userProfile);
+
+      // Get data from the profile
+      let phone = userProfile.phone || '';
+      let address = userProfile.address || '';
+
+      // Check localStorage for fallback values only if needed
+      if (typeof window !== 'undefined') {
+        if (!phone && localStorage.getItem('user_phone')) {
+          phone = localStorage.getItem('user_phone') || '';
+        }
+
+        if (!address && localStorage.getItem('user_address')) {
+          address = localStorage.getItem('user_address') || '';
+        }
+      }
+
       setProfile(prev => ({
         ...prev,
         name: userProfile.name || '',
         email: userProfile.email || '',
-        // Use default values if these fields don't exist yet
-        phone: userProfile.phone || '',
-        address: userProfile.address || ''
+        phone: phone,
+        address: address,
+        profile_user_id: userProfile.profile_user_id
       }));
     }
   }, [userProfile]);
@@ -121,15 +140,23 @@ export default function AccountDashboard() {
         // Don't update email as it requires verification
         // email: profile.email,
         phone: profile.phone,
-        address: profile.address
+        address: profile.address,
+        profile_user_id: userProfile?.profile_user_id
       });
 
       if (error) {
+        console.error('Profile update error:', error);
         setUpdateError(error.message);
         toast.error('Failed to update profile');
       } else if (user) {
         setIsEditing(false);
         toast.success('Profile updated successfully');
+
+        // Clear any localStorage fallbacks as we now have proper database storage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('user_phone');
+          localStorage.removeItem('user_address');
+        }
       }
     } catch (err: any) {
       console.error('Profile update error:', err);
@@ -192,10 +219,10 @@ export default function AccountDashboard() {
     <div className={`container mx-auto px-4 py-12 ${serif.variable} ${sans.variable}`} role="main">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12">
+        <div className="flex flex-col md:flex-row justify-between pb-12 items-start md:items-center mb-12">
           <div>
             <h1 className="font-serif text-3xl md:text-4xl font-bold mb-2 text-[#2D2D2D]">My Account</h1>
-            <p className="text-gray-600 font-sans">Welcome back, {profile.name}</p>
+            <p className="text-gray-600  font-sans">Welcome back, {profile.name}</p>
           </div>
           <Button
             variant="outline"
@@ -212,7 +239,7 @@ export default function AccountDashboard() {
           <div className="flex flex-col md:flex-row gap-8">
             {/* Sidebar */}
             <div className="w-full md:w-64 shrink-0">
-              <TabsList className="flex flex-row md:flex-col w-full p-0 bg-transparent space-y-0 md:space-y-1">
+              <TabsList className="flex flex-row md:flex-col w-full p-0 bg-transparent space-y-0 md:space-y-1 overflow-x-auto md:overflow-x-visible">
                 <TabsTrigger
                   value="profile"
                   className="w-full justify-start gap-3 p-3 font-sans data-[state=active]:bg-gray-100 data-[state=active]:text-[#2D2D2D] data-[state=active]:font-medium rounded-md"
@@ -260,7 +287,7 @@ export default function AccountDashboard() {
                     )}
 
                     <div className="flex flex-col md:flex-row items-start gap-8">
-                      <div className="w-full md:w-auto flex flex-col items-center">
+                      <div className="w-full md:w-auto flex flex-col items-center mb-6 md:mb-0">
                         <Avatar className="w-32 h-32 border-4 border-white shadow-md" role="img" aria-label="User profile picture">
                           <div className="w-full h-full flex items-center justify-center bg-[#2D2D2D] text-white text-2xl font-serif">
                             {profile.name ? profile.name.charAt(0).toUpperCase() : 'A'}
@@ -270,7 +297,7 @@ export default function AccountDashboard() {
 
                       {isEditing ? (
                         <form onSubmit={handleProfileUpdate} className="flex-1 space-y-6 w-full" role="form">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                             <div className="space-y-2">
                               <label htmlFor="name" className="text-sm font-medium font-sans text-gray-700">Full Name</label>
                               <Input
@@ -315,7 +342,7 @@ export default function AccountDashboard() {
                               />
                             </div>
                           </div>
-                          <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                          <div className="flex flex-col sm:flex-row gap-3 pt-6">
                             <Button
                               type="submit"
                               className="bg-[#2D2D2D] hover:bg-[#1a1a1a] text-white font-sans flex items-center gap-2"
@@ -347,7 +374,7 @@ export default function AccountDashboard() {
                         </form>
                       ) : (
                         <div className="flex-1 w-full" role="region">
-                          <div className="flex flex-col sm:flex-row justify-between items-start mb-6">
+                          <div className="flex flex-col sm:flex-row justify-between items-start mb-8">
                             <div>
                               <h2 className="font-serif text-2xl font-semibold mb-1 text-[#2D2D2D]">{profile.name || 'Your Name'}</h2>
                               <p className="text-gray-600 font-sans">{profile.email || 'your.email@example.com'}</p>
@@ -361,19 +388,29 @@ export default function AccountDashboard() {
                             </Button>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-                            <div className="p-4 bg-gray-50 rounded-lg">
-                              <h3 className="font-sans font-medium mb-2 text-[#2D2D2D]">Phone Number</h3>
-                              <p className="text-gray-700 font-sans">{profile.phone || 'Not provided'}</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-8">
+                            <div className="p-5 bg-gray-50 rounded-lg shadow-sm">
+                              <h3 className="font-sans font-medium mb-2 text-[#2D2D2D] flex items-center gap-2">
+                                <span className="flex w-5 h-5 rounded-full bg-gray-200 items-center justify-center text-gray-500">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                </span>
+                                Phone Number
+                              </h3>
+                              <p className="text-gray-700 font-sans pl-7">{profile.phone || 'Not provided'}</p>
                             </div>
-                            <div className="p-4 bg-gray-50 rounded-lg">
-                              <h3 className="font-sans font-medium mb-2 text-[#2D2D2D]">Shipping Address</h3>
-                              <p className="text-gray-700 font-sans">{profile.address || 'Not provided'}</p>
+                            <div className="p-5 bg-gray-50 rounded-lg shadow-sm">
+                              <h3 className="font-sans font-medium mb-2 text-[#2D2D2D] flex items-center gap-2">
+                                <span className="flex w-5 h-5 rounded-full bg-gray-200 items-center justify-center text-gray-500">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                </span>
+                                Shipping Address
+                              </h3>
+                              <p className="text-gray-700 font-sans pl-7">{profile.address || 'Not provided'}</p>
                             </div>
                           </div>
 
                           {/* Email Verification Section */}
-                          <div className="mt-8 p-4 border border-amber-200 bg-amber-50 rounded-lg">
+                          <div className="mt-8 p-5 border border-amber-200 bg-amber-50 rounded-lg shadow-sm">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                               <div>
                                 <h3 className="font-sans font-medium mb-1 text-amber-800">Email Verification</h3>
@@ -436,7 +473,16 @@ export default function AccountDashboard() {
                     <CardDescription className="font-sans text-gray-600">Items you've saved for later</CardDescription>
                   </CardHeader>
                   <CardContent className="p-6">
-                    <Wishlist items={[]} onRemove={(id) => console.log('Remove item:', id)} />
+                    <Wishlist
+                      items={favorites.map(item => ({
+                        id: item.id,
+                        name: item.name,
+                        price: item.price,
+                        image: item.image,
+                        inStock: true // Assuming all items are in stock by default
+                      }))}
+                      onRemove={(id) => removeFavorite(id)}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>

@@ -56,12 +56,15 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       link: "bg-transparent text-primary hover:underline p-0 h-auto",
     };
 
+    // Check if the button has the no-hover class
+    const hasNoHoverClass = className?.includes('no-hover');
+
     return (
       <button
         className={cn(
           "inline-flex items-center justify-center rounded-md font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent-gold focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",
           sizeClasses[size],
-          variantClasses[variant],
+          hasNoHoverClass ? variantClasses[variant].replace(/hover:[^ ]*/g, '') : variantClasses[variant],
           withCheckmark && "btn-morphing",
           isAdded && "success",
           className,

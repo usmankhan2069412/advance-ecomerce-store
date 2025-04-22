@@ -15,8 +15,10 @@ import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carouse
 import { Star, ShoppingBag, Share2, Maximize, Info, Heart } from "lucide-react";
 import { trackProductView, trackAddToCart } from "@/lib/analytics";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { toast } from "sonner";
+import LoginPopup from "@/components/LoginPopup";
 
 interface ProductDetailProps {
   params: {
@@ -39,7 +41,12 @@ export default function ProductDetail({ params }: ProductDetailProps) {
 
   // Get cart and favorites contexts
   const { addItem } = useCart();
+  const { isAuthenticated } = useAuth();
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
+
+  // State for login popup
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'favorite' | 'cart' | null>(null);
 
   // Mock product data - in a real app, this would come from an API
   useEffect(() => {
@@ -129,6 +136,13 @@ export default function ProductDetail({ params }: ProductDetailProps) {
 
   // Handle add to cart
   const handleAddToCart = () => {
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      setPendingAction('cart');
+      setShowLoginPopup(true);
+      return;
+    }
+
     if (!selectedSize) {
       toast.error("Please select a size");
       return;
@@ -160,6 +174,13 @@ export default function ProductDetail({ params }: ProductDetailProps) {
   const handleToggleFavorite = () => {
     if (!product) return;
 
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      setPendingAction('favorite');
+      setShowLoginPopup(true);
+      return;
+    }
+
     if (isFavorite(productId)) {
       removeFavorite(productId);
       toast.success(`${product.name} removed from favorites`);
@@ -173,6 +194,44 @@ export default function ProductDetail({ params }: ProductDetailProps) {
       });
       toast.success(`${product.name} added to favorites`);
     }
+  };
+
+  // Function to handle successful login
+  const handleLoginSuccess = () => {
+    // After successful login, perform the pending action
+    if (pendingAction === 'favorite') {
+      // Add to favorites
+      addFavorite({
+        id: productId,
+        name: product.name,
+        price: product.price,
+        image: product.images[0],
+        description: product.description
+      });
+      toast.success(`${product.name} added to favorites`);
+    } else if (pendingAction === 'cart') {
+      // Add to cart
+      if (!selectedSize || !selectedColor) {
+        // If size or color not selected, just return without adding to cart
+        // The user will need to select these options first
+        return;
+      }
+
+      addItem({
+        id: productId,
+        name: product.name,
+        price: product.price,
+        quantity: quantity,
+        image: product.images[0],
+        size: selectedSize,
+        color: selectedColor
+      });
+
+      toast.success(`${product.name} added to your bag!`);
+    }
+
+    // Reset pending action
+    setPendingAction(null);
   };
 
   // Loading state
@@ -214,6 +273,18 @@ export default function ProductDetail({ params }: ProductDetailProps) {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Login Popup */}
+      <LoginPopup
+        isOpen={showLoginPopup}
+        onClose={() => {
+          setShowLoginPopup(false);
+          setPendingAction(null);
+        }}
+        onSuccess={handleLoginSuccess}
+        message={pendingAction === 'favorite' ?
+          "Please log in to add items to your favorites" :
+          "Please log in to add items to your bag"}
+      />
       {/* Main Product Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
         {/* Product Images Gallery */}

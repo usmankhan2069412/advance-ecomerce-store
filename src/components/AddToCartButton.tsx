@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { ShoppingBag, Check, X, Plus, Minus } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import LoginPopup from './LoginPopup';
 
 interface AddToCartButtonProps {
   productId: string;
@@ -35,11 +37,13 @@ export default function AddToCartButton({
   showQuantity = false,
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
+  const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   // Reset state when product changes
   useEffect(() => {
@@ -76,7 +80,7 @@ export default function AddToCartButton({
     // Show success animation
     setIsAdded(true);
     toast.success(`${productName} added to your bag!`);
-    
+
     // Reset after animation
     setTimeout(() => {
       setIsOpen(false);
@@ -85,10 +89,26 @@ export default function AddToCartButton({
   };
 
   const handleOpenSelector = () => {
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      setShowLoginPopup(true);
+      return;
+    }
+
     if (sizes.length > 0 || colors.length > 0) {
       setIsOpen(true);
     } else {
       // If no options to select, add directly
+      handleAddToCart();
+    }
+  };
+
+  // Function to handle successful login
+  const handleLoginSuccess = () => {
+    // After successful login, continue with the add to cart process
+    if (sizes.length > 0 || colors.length > 0) {
+      setIsOpen(true);
+    } else {
       handleAddToCart();
     }
   };
@@ -121,6 +141,14 @@ export default function AddToCartButton({
         )}
         {inventory > 0 ? (isAdded ? 'Added to Bag' : 'Add to Bag') : 'Out of Stock'}
       </Button>
+
+      {/* Login Popup */}
+      <LoginPopup
+        isOpen={showLoginPopup}
+        onClose={() => setShowLoginPopup(false)}
+        onSuccess={handleLoginSuccess}
+        message="Please log in to add items to your bag"
+      />
 
       <AnimatePresence>
         {isOpen && (
