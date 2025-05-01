@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
@@ -11,13 +11,26 @@ import { motion } from 'framer-motion';
 export default function OrderConfirmationPage() {
   const router = useRouter();
   const { clearCart } = useCart();
-  const orderNumber = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+  const [orderNumber, setOrderNumber] = useState<string>('');
   const estimatedDelivery = new Date();
   estimatedDelivery.setDate(estimatedDelivery.getDate() + 5);
 
   useEffect(() => {
     // Clear cart when order is confirmed
     clearCart();
+    
+    // Generate a unique order number
+    const generateOrderNumber = () => {
+      const timestamp = Date.now().toString().slice(-6);
+      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      const prefix = 'ORD';
+      const year = new Date().getFullYear().toString().slice(-2);
+      const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
+      
+      return `${prefix}-${year}${month}-${timestamp}${random}`;
+    };
+
+    setOrderNumber(generateOrderNumber());
   }, [clearCart]);
 
   // Animation variants
@@ -69,7 +82,7 @@ export default function OrderConfirmationPage() {
                   <Package className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="font-semibold mb-1">Order Number</h3>
-                <p className="text-gray-600">{orderNumber}</p>
+                <p className="text-gray-600 font-mono">{orderNumber}</p>
               </div>
 
               <div className="flex flex-col items-center md:items-start text-center md:text-left">

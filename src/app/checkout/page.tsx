@@ -35,7 +35,19 @@ const paymentSchema = z.object({
   expiryDate: z
     .string()
     .min(5, 'Valid expiry date is required')
-    .refine((val) => /^(0[1-9]|1[0-2])\/\d{2}$/.test(val), 'Expiry date must be in MM/YY format'),
+    .refine((val) => {
+      // More lenient validation for demo purposes
+      const [month, year] = val.split('/');
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear() % 100;
+      const currentMonth = currentDate.getMonth() + 1;
+      
+      // Allow any future date for demo
+      const inputYear = parseInt(year);
+      const inputMonth = parseInt(month);
+      
+      return inputYear >= currentYear || (inputYear === currentYear && inputMonth >= currentMonth);
+    }, 'Expiry date must be in the future'),
   cvv: z
     .string()
     .min(3, 'Valid CVV is required')
@@ -57,17 +69,6 @@ export default function CheckoutPage() {
   const [isPromoApplied, setIsPromoApplied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleApplyPromoCode = () => {
-    if (promoCode.trim() !== '') {
-      // Call the applyPromoCode function from CartContext
-      applyPromoCode(promoCode);
-      setIsPromoApplied(true);
-      toast.success('Promo code applied successfully!');
-    } else {
-      toast.error('Please enter a valid promo code');
-    }
-  };
-
   // Redirect to cart if cart is empty
   useEffect(() => {
     if (cartItems.length === 0) {
@@ -77,28 +78,146 @@ export default function CheckoutPage() {
 
   const shippingForm = useForm<z.infer<typeof shippingSchema>>({
     resolver: zodResolver(shippingSchema),
+    defaultValues: {
+      fullName: '',
+      email: '',
+      address: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      phone: '',
+    },
   });
 
   const paymentForm = useForm<z.infer<typeof paymentSchema>>({
     resolver: zodResolver(paymentSchema),
+    defaultValues: {
+      cardNumber: '',
+      cardholderName: '',
+      expiryDate: '',
+      cvv: '',
+    },
   });
 
   const handleShippingSubmit = (data: z.infer<typeof shippingSchema>) => {
     setShippingData(data);
     setCurrentStep('payment');
+    window.scrollTo(0, 0);
   };
 
-  const handlePaymentSubmit = (data: z.infer<typeof paymentSchema>) => {
-    setPaymentData(data);
-    setCurrentStep('review');
+  const handlePaymentSubmit = async (data: z.infer<typeof paymentSchema>) => {
+    try {
+      // Basic validation
+      if (!data.cardNumber || !data.cardholderName || !data.expiryDate || !data.cvv) {
+        toast.error('Please fill in all payment fields');
+        return;
+      }
+
+      // Format validation
+      if (data.cardNumber.length < 16) {
+        toast.error('Please enter a valid card number');
+        return;
+      }
+
+      // More lenient expiry date validation for demo
+      const [month, year] = data.expiryDate.split('/');
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear() % 100;
+      const currentMonth = currentDate.getMonth() + 1;
+      
+      const inputYear = parseInt(year);
+      const inputMonth = parseInt(month);
+      
+      if (inputYear < currentYear || (inputYear === currentYear && inputMonth < currentMonth)) {
+        toast.error('Please enter a future expiry date');
+        return;
+      }
+
+      if (data.cvv.length < 3) {
+        toast.error('Please enter a valid CVV');
+        return;
+      }
+
+      // If all validations pass
+      setPaymentData(data);
+      setCurrentStep('review');
+      window.scrollTo(0, 0);
+    } catch (error) {
+      toast.error('There was an error processing your payment information. Please try again.');
+    }
   };
 
-  const handlePlaceOrder = () => {
-    // Implement order submission logic here
-    console.log('Order placed:', { shippingData, paymentData, cartItems, total });
-    // You would typically make an API call here to process the order
-    router.push('/order-confirmation');
+  const handleApplyPromoCode = () => {
+    if (!promoCode.trim()) {
+      toast.error('Please enter a promo code');
+      return;
+    }
+    
+    applyPromoCode(promoCode);
+    setIsPromoApplied(true);
+    toast.success('Promo code applied successfully!');
+    setPromoCode('');
   };
+
+  const handlePlaceOrder = async () => {
+    setIsProcessing(true);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Success
+      router.push('/order-confirmation');
+    } catch (error) {
+      toast.error('There was an error processing your order. Please try again.');
+      setIsProcessing(false);
+    }
+  };
+
+  // Format card number with spaces
+  const formatCardNumber = (value: string) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const matches = v.match(/\d{4,16}/g);
+    const match = matches && matches[0] || '';
+    const parts = [];
+
+    for (let i = 0, len = match.length; i < len; i += 4) {
+      parts.push(match.substring(i, i + 4));
+    }
+
+    if (parts.length) {
+      return parts.join(' ');
+    } else {
+      return value;
+    }
+  };
+
+  // Format expiry date
+  const formatExpiryDate = (value: string) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    
+    if (v.length >= 2) {
+      return `${v.substring(0, 2)}/${v.substring(2, 4)}`;
+    }
+    
+    return v;
+  };
+
+  // Calculate shipping cost based on method
+  const getShippingCost = () => {
+    switch (shippingMethod) {
+      case 'express':
+        return 15;
+      case 'overnight':
+        return 25;
+      case 'standard':
+      default:
+        return 10;
+    }
+  };
+
+  // Calculate final total
+  const finalTotal = subtotal + getShippingCost() + tax - promoCodeDiscount;
 
   const renderProgressBar = () => (
     <div className="relative max-w-2xl mx-auto mb-12">
@@ -156,6 +275,143 @@ export default function CheckoutPage() {
     </div>
   );
   // end of renderProgressBar
+
+  const renderOrderSummary = () => (
+    <Card className="p-6 sticky top-4">
+      <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+      
+      {/* Items */}
+      <div className="max-h-60 overflow-y-auto mb-4">
+        {cartItems.map((item) => (
+          <div key={item.id} className="flex items-center gap-3 py-2 border-b">
+            <div className="relative w-16 h-16 bg-gray-100 rounded overflow-hidden">
+              <Image 
+                src={item.image} 
+                alt={item.name} 
+                fill 
+                className="object-cover"
+              />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-medium text-sm">{item.name}</h4>
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-600">
+                  ${item.price.toFixed(2)} × {item.quantity}
+                  {item.size && <span className="ml-2">Size: {item.size}</span>}
+                </p>
+                <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Promo code */}
+      {currentStep !== 'review' && (
+        <div className="mb-4">
+          <div className="flex gap-2 mb-2">
+            <Input
+              placeholder="Enter promo code"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={handleApplyPromoCode} size="md" variant={isPromoApplied ? "secondary" : "primary"}>
+              {isPromoApplied ? <Check className="h-4 w-4" /> : <Gift className="h-4 w-4 mr-1" />}
+              {isPromoApplied ? '' : 'Apply'}
+            </Button>
+          </div>
+          {isPromoApplied && promoCodeDiscount > 0 && (
+            <p className="text-xs text-green-600">Promo code applied successfully!</p>
+          )}
+        </div>
+      )}
+      
+      {/* Shipping method selection */}
+      {currentStep === 'shipping' && (
+        <div className="mb-4">
+          <h3 className="text-sm font-medium mb-2">Shipping Method</h3>
+          <div className="space-y-2">
+            <div
+              className={`p-3 border rounded-md cursor-pointer ${
+                shippingMethod === 'standard' ? 'border-primary bg-primary/5' : 'border-gray-200'
+              }`}
+              onClick={() => setShippingMethod('standard')}
+            >
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Standard Shipping</span>
+                <span>$10.00</span>
+              </div>
+              <p className="text-xs text-gray-500">Delivery in 5-7 business days</p>
+            </div>
+            <div
+              className={`p-3 border rounded-md cursor-pointer ${
+                shippingMethod === 'express' ? 'border-primary bg-primary/5' : 'border-gray-200'
+              }`}
+              onClick={() => setShippingMethod('express')}
+            >
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Express Shipping</span>
+                <span>$15.00</span>
+              </div>
+              <p className="text-xs text-gray-500">Delivery in 2-3 business days</p>
+            </div>
+            <div
+              className={`p-3 border rounded-md cursor-pointer ${
+                shippingMethod === 'overnight' ? 'border-primary bg-primary/5' : 'border-gray-200'
+              }`}
+              onClick={() => setShippingMethod('overnight')}
+            >
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Overnight Shipping</span>
+                <span>$25.00</span>
+              </div>
+              <p className="text-xs text-gray-500">Next business day delivery</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Cost breakdown */}
+      <div className="space-y-2 py-4 border-t border-b mb-4">
+        <div className="flex justify-between">
+          <span className="text-gray-600">Subtotal</span>
+          <span>${subtotal.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-600">Shipping</span>
+          <span>${getShippingCost().toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-600">Tax</span>
+          <span>${tax.toFixed(2)}</span>
+        </div>
+        {promoCodeDiscount > 0 && (
+          <div className="flex justify-between text-green-600">
+            <span>Discount</span>
+            <span>-${promoCodeDiscount.toFixed(2)}</span>
+          </div>
+        )}
+        <div className="flex justify-between font-semibold text-lg pt-2">
+          <span>Total</span>
+          <span>${finalTotal.toFixed(2)}</span>
+        </div>
+      </div>
+      
+      {/* Action buttons based on step */}
+      {currentStep === 'review' && (
+        <Button 
+          className="w-full" 
+          size="lg" 
+          onClick={handlePlaceOrder}
+          isLoading={isProcessing}
+          disabled={isProcessing}
+        >
+          Place Order
+        </Button>
+      )}
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -264,6 +520,56 @@ export default function CheckoutPage() {
                         </FormItem>
                       )}
                     />
+                    <div className="mt-6">
+                      <h3 className="text-lg font-semibold mb-4">Shipping Method</h3>
+                      <div className="space-y-4">
+                        <div
+                          className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                            shippingMethod === 'standard' ? 'border-primary bg-primary/5' : 'border-gray-200'
+                          }`}
+                          onClick={() => setShippingMethod('standard')}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h4 className="font-medium">Standard Shipping</h4>
+                              <p className="text-sm text-gray-500">5-7 business days</p>
+                            </div>
+                            <span className="font-medium">$10.00</span>
+                          </div>
+                        </div>
+                        
+                        <div
+                          className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                            shippingMethod === 'express' ? 'border-primary bg-primary/5' : 'border-gray-200'
+                          }`}
+                          onClick={() => setShippingMethod('express')}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h4 className="font-medium">Express Shipping</h4>
+                              <p className="text-sm text-gray-500">2-3 business days</p>
+                            </div>
+                            <span className="font-medium">$15.00</span>
+                          </div>
+                        </div>
+                        
+                        <div
+                          className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                            shippingMethod === 'overnight' ? 'border-primary bg-primary/5' : 'border-gray-200'
+                          }`}
+                          onClick={() => setShippingMethod('overnight')}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h4 className="font-medium">Overnight Shipping</h4>
+                              <p className="text-sm text-gray-500">Next business day</p>
+                            </div>
+                            <span className="font-medium">$25.00</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <Button
                       type="submit"
                       className="w-full py-6 mt-4 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-primary/20 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-primary/30"
@@ -272,48 +578,34 @@ export default function CheckoutPage() {
                     </Button>
                   </form>
                 </Form>
-        )}
+              )}
 
               {currentStep === 'payment' && (
-                <Form {...paymentForm}>
-                  <h2 className="text-2xl font-bold mb-6 inline-flex items-center"><CreditCard className="mr-3 h-6 w-6 text-primary" /> Payment Information</h2>
+                <Card className="p-6">
+                  <h2 className="text-xl font-semibold mb-6 inline-flex items-center">
+                    <CreditCard className="mr-3 h-6 w-6 text-primary" /> Payment Information
+                  </h2>
                   <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 flex items-center">
                     <div className="bg-blue-100 p-2 rounded-full mr-3">
                       <svg className="h-5 w-5 text-blue-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </div>
-                    <p className="text-sm text-blue-700">All transactions are secure and encrypted. Your personal information is protected.</p>
+                    <p className="text-sm text-blue-700">All transactions are secure and encrypted. Your payment information is protected.</p>
                   </div>
-                  <form onSubmit={paymentForm.handleSubmit(handlePaymentSubmit)} className="space-y-6">
-                    <FormField
-                      control={paymentForm.control}
-                      name="cardNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Card Number</FormLabel>
-                          <FormControl>
-                            <CheckoutInput
-                              {...field}
-                              className="bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
+                  <Form {...paymentForm}>
+                    <form onSubmit={paymentForm.handleSubmit(handlePaymentSubmit)} className="space-y-6">
                       <FormField
                         control={paymentForm.control}
-                        name="expiryDate"
+                        name="cardholderName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Expiry Date</FormLabel>
+                            <FormLabel>Cardholder Name</FormLabel>
                             <FormControl>
-                              <CheckoutInput
-                                placeholder="MM/YY"
-                                {...field}
-                                className="bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
+                              <Input 
+                                {...field} 
+                                placeholder="Name as shown on card"
+                                className="h-11"
                               />
                             </FormControl>
                             <FormMessage />
@@ -322,40 +614,109 @@ export default function CheckoutPage() {
                       />
                       <FormField
                         control={paymentForm.control}
-                        name="cvv"
+                        name="cardNumber"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>CVV</FormLabel>
+                            <FormLabel>Card Number</FormLabel>
                             <FormControl>
-                              <CheckoutInput
-                                type="password"
-                                maxLength={4}
-                                {...field}
-                                className="bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
+                              <Input 
+                                {...field} 
+                                placeholder="1234 5678 9012 3456"
+                                value={formatCardNumber(field.value)}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/\s/g, '');
+                                  if (value.length <= 16 && /^\d*$/.test(value)) {
+                                    field.onChange(value);
+                                  }
+                                }}
+                                className="h-11"
+                                maxLength={19}
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </div>
-                    <div className="flex gap-4 mt-6">
-                      <Button
-                        variant="outline"
-                        onClick={() => setCurrentStep('shipping')}
-                        className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                      >
-                        <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                      </Button>
-                      <Button
-                        type="submit"
-                        className="flex-1 py-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
-                      >
-                        Continue to Review <ChevronRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={paymentForm.control}
+                          name="expiryDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Expiry Date</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  placeholder="MM/YY"
+                                  value={formatExpiryDate(field.value)}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '');
+                                    if (value.length <= 4) {
+                                      field.onChange(value);
+                                    }
+                                  }}
+                                  className="h-11"
+                                  maxLength={5}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={paymentForm.control}
+                          name="cvv"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                <div className="flex items-center">
+                                  CVV
+                                  <span className="ml-1 text-gray-400 hover:text-gray-600 cursor-help" title="3 or 4 digit security code on the back of your card">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                    </svg>
+                                  </span>
+                                </div>
+                              </FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  type="password"
+                                  placeholder="123"
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '');
+                                    if (value.length <= 4) {
+                                      field.onChange(value);
+                                    }
+                                  }}
+                                  className="h-11"
+                                  maxLength={4}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="pt-6 flex gap-4">
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          onClick={() => setCurrentStep('shipping')}
+                          className="px-6"
+                        >
+                          <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                        </Button>
+                        <Button 
+                          type="submit"
+                          className="flex-1 bg-primary hover:bg-primary/90"
+                        >
+                          Continue to Review <ChevronRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </Card>
               )}
 
               {currentStep === 'review' && (
@@ -434,402 +795,21 @@ export default function CheckoutPage() {
                     <Button
                       onClick={handlePlaceOrder}
                       className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
+                      disabled={isProcessing}
                     >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+                      {isProcessing ? 'Processing...' : 'Place Order'} <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
-                    </Button>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="flex-1 py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-green-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500/30"
-                    >
-                      Place Order <Gift className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep('payment')}
-                      className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      <ChevronLeft className="mr-2 h
+                  </div>
+                </div>
+              )}
+            </Card>
+          </div>
+          
+          <div className="lg:col-span-1">
+            {renderOrderSummary()}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

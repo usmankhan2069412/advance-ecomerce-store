@@ -1,3 +1,5 @@
+'use client';
+
 import * as React from "react";
 import { cn } from "../../lib/utils";
 
@@ -6,6 +8,12 @@ export interface CheckoutInputProps
 
 const CheckoutInput = React.forwardRef<HTMLInputElement, CheckoutInputProps>(
   ({ className, type, value, ...props }, ref) => {
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+      setMounted(true);
+    }, []);
+
     return (
       <input
         type={type}
@@ -14,7 +22,7 @@ const CheckoutInput = React.forwardRef<HTMLInputElement, CheckoutInputProps>(
           className,
         )}
         ref={ref}
-        value={value !== undefined && value !== null ? value : ""}
+        value={mounted ? value : ''}
         {...props}
       />
     );
