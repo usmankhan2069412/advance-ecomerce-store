@@ -114,16 +114,19 @@ const Header = ({ transparent = false }: HeaderProps) => {
                   <p className="text-sm font-medium">Hello, {userProfile?.name}</p>
                   <p className="text-xs text-gray-500 truncate">{userProfile?.email}</p>
                 </div>
-                <DropdownMenuItem>
-                  <button
-                    onClick={() => router.push('/account')}
-                    className="w-full text-left cursor-pointer"
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/account"
+                    className="w-full text-left cursor-pointer block"
                   >
                     My Account
-                  </button>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/orders" className="cursor-pointer">
+                  <Link
+                    href="/account?tab=orders"
+                    className="w-full text-left cursor-pointer block"
+                  >
                     My Orders
                   </Link>
                 </DropdownMenuItem>

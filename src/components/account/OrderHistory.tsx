@@ -38,7 +38,7 @@ export default function OrderHistory({ orders = [] }: OrderHistoryProps) {
         <Package className="w-12 h-12 mx-auto mb-4 text-gray-400" />
         <h3 className="text-lg font-medium mb-2">No orders yet</h3>
         <p className="text-gray-600 mb-4">When you place an order, it will appear here</p>
-        <Button>Start Shopping</Button>
+        <Button onClick={() => window.location.href = '/'}>Start Shopping</Button>
       </Card>
     );
   }

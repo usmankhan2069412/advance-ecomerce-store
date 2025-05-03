@@ -1,7 +1,6 @@
 import { TempoInit } from "@/components/tempo-init";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
@@ -9,6 +8,7 @@ import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import { SonnerToaster } from '@/components/ui/sonner-toaster';
 import CartWrapper from '@/components/CartWrapper';
 import AuthStateSync from '@/components/AuthStateSync';
+import ErrorHandlingScript from '@/components/ErrorHandlingScript';
 
 
 const inter = Inter({ subsets: ["latin"] });
@@ -31,7 +31,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
       </head>
-      <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
+      <ErrorHandlingScript />
       <body className={`${inter.className} antialiased bg-white text-gray-900`}>
           <AuthProvider>
             <AuthStateSync />

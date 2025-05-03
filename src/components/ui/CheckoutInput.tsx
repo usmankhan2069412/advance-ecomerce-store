@@ -1,18 +1,33 @@
 'use client';
 
 import * as React from "react";
-import { cn } from "../../lib/utils";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 export interface CheckoutInputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {}
 
 const CheckoutInput = React.forwardRef<HTMLInputElement, CheckoutInputProps>(
-  ({ className, type, value, ...props }, ref) => {
-    const [mounted, setMounted] = React.useState(false);
+  ({ className, type, ...props }, ref) => {
+    // Use client-side only rendering for email inputs to avoid hydration mismatches
+    const [isMounted, setIsMounted] = useState(false);
 
-    React.useEffect(() => {
-      setMounted(true);
+    useEffect(() => {
+      setIsMounted(true);
     }, []);
+
+    // If not mounted yet (server-side) and it's an email input, return a placeholder div
+    if (!isMounted && type === "email") {
+      return (
+        <div
+          className={cn(
+            "flex h-12 w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-base shadow-sm transition-all duration-200",
+            className
+          )}
+          aria-hidden="true"
+        />
+      );
+    }
 
     return (
       <input
@@ -22,7 +37,7 @@ const CheckoutInput = React.forwardRef<HTMLInputElement, CheckoutInputProps>(
           className,
         )}
         ref={ref}
-        value={mounted ? value : ''}
+        value={isMounted ? props.value : ''}
         {...props}
       />
     );

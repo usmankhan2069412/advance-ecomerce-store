@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { AuthService } from '@/services/auth-service';
@@ -13,6 +13,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import OrderHistory from '@/components/account/OrderHistory';
+import UserOrderHistory from '@/components/account/UserOrderHistory';
 import Wishlist from '@/components/account/Wishlist';
 import AccountSettings from '@/components/account/AccountSettings';
 import Link from 'next/link';
@@ -35,6 +36,7 @@ const sans = Inter({
 
 export default function AccountDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated, userProfile, logout, resendConfirmationEmail, isLoading } = useAuth();
   const { favorites, removeFavorite } = useFavorites();
   const [isResendingEmail, setIsResendingEmail] = useState(false);
@@ -47,6 +49,29 @@ export default function AccountDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState('');
+  const [activeTab, setActiveTab] = useState('profile');
+
+  // Get the tab from URL query parameters
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['profile', 'orders', 'wishlist', 'settings'].includes(tabParam)) {
+      setActiveTab(tabParam);
+
+      // Update URL to reflect the current tab without causing a page reload
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tabParam);
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams]);
+
+  // Update URL when tab changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', activeTab);
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [activeTab]);
 
   // Load user profile data
   useEffect(() => {
@@ -235,7 +260,7 @@ export default function AccountDashboard() {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="profile" className="w-full" role="tablist">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" role="tablist">
           <div className="flex flex-col md:flex-row gap-8">
             {/* Sidebar */}
             <div className="w-full md:w-64 shrink-0">
@@ -461,7 +486,7 @@ export default function AccountDashboard() {
                     <CardDescription className="font-sans text-gray-600">View and track your orders</CardDescription>
                   </CardHeader>
                   <CardContent className="p-6">
-                    <OrderHistory orders={[]} />
+                    <UserOrderHistory />
                   </CardContent>
                 </Card>
               </TabsContent>

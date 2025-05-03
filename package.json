@@ -24,6 +24,7 @@
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "^2.49.4",
     "@tensorflow/tfjs": "^4.22.0",
+    "@types/uuid": "^10.0.0",
     "autoprefixer": "10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -49,6 +50,7 @@
     "stripe": "^17.6.0",
     "tempo-devtools": "^2.0.99",
     "three": "^0.155.0",
+    "uuid": "^11.1.0",
     "vaul": "^1.1.2",
     "zod": "^3.24.2"
   },

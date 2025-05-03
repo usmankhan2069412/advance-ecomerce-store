@@ -1,4 +1,4 @@
-import { supabase, User } from '@/lib/supabase-client';
+import { supabase, User, handleSupabaseError } from '@/lib/supabase-client';
 
 export interface UserProfile {
   id: string;
@@ -525,60 +525,106 @@ export class AuthService {
 
       // Get the basic profile data
       let basicProfileData: any = null;
-      const { data: initialProfileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
 
-      if (profileError) {
-        console.error('Error fetching profile in getCurrentUser:', profileError);
-        // Continue despite error
-      }
+      try {
+        const { data: initialProfileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-      // Set basicProfileData to the initial result
-      basicProfileData = initialProfileData;
+        if (profileError) {
+          const formattedError = handleSupabaseError(profileError);
+          console.error('Error fetching profile in getCurrentUser:', formattedError);
+          // Continue despite error
+        }
 
-      // If profile doesn't exist, create it automatically
-      if (!basicProfileData) {
-        console.log('Profile not found for current user, creating one:', userId);
+        // Set basicProfileData to the initial result
+        basicProfileData = initialProfileData;
 
-        try {
+        // If profile doesn't exist, create it automatically
+        if (!basicProfileData) {
+          console.log('Profile not found for current user, creating one:', userId);
+
           // Get user metadata or use defaults
           const name = sessionData.session.user.user_metadata?.name || 'User';
+          const email = sessionData.session.user.email || '';
+
+          if (!email) {
+            console.error('Cannot create profile: User email is missing');
+            throw new Error('User email is required to create a profile');
+          }
+
+          // Create profile with only the fields that exist in the table
+          const profileData = {
+            id: userId,
+            name: name,
+            email: email,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+
+          console.log('Creating profile with data:', { ...profileData, id: profileData.id.substring(0, 8) + '...' });
 
           // Create profile
-          const { error: createProfileError } = await supabase
+          const { data: insertedProfile, error: createProfileError } = await supabase
             .from('profiles')
-            .upsert([
-              {
-                id: userId,
-                name: name,
-                email: sessionData.session.user.email,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-            ], { onConflict: 'id' });
+            .upsert([profileData], {
+              onConflict: 'id',
+              returning: 'representation' // Return the inserted/updated row
+            });
 
           if (createProfileError) {
-            console.error('Error creating profile in getCurrentUser:', createProfileError);
-            // Continue despite error
+            const formattedError = handleSupabaseError(createProfileError);
+            console.error('Error creating profile in getCurrentUser:', formattedError);
+
+            // Try a simpler insert as a fallback
+            console.log('Trying fallback profile creation method...');
+            const { data: fallbackProfile, error: fallbackError } = await supabase
+              .from('profiles')
+              .insert([{
+                id: userId,
+                name: name,
+                email: email
+              }])
+              .select()
+              .single();
+
+            if (fallbackError) {
+              console.error('Fallback profile creation also failed:', handleSupabaseError(fallbackError));
+            } else if (fallbackProfile) {
+              console.log('Fallback profile creation succeeded');
+              basicProfileData = fallbackProfile;
+            }
+          } else if (insertedProfile && insertedProfile.length > 0) {
+            console.log('Profile created successfully');
+            basicProfileData = insertedProfile[0];
           }
 
-          // Fetch the newly created profile
-          const { data: newProfileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle();
+          // If we still don't have profile data, try to fetch it one more time
+          if (!basicProfileData) {
+            const { data: newProfileData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', userId)
+              .maybeSingle();
 
-          if (newProfileData) {
-            // Use the new profile data
-            basicProfileData = newProfileData;
+            if (newProfileData) {
+              console.log('Retrieved newly created profile');
+              basicProfileData = newProfileData;
+            }
           }
-        } catch (err) {
-          console.error('Unexpected error creating profile in getCurrentUser:', err);
         }
+      } catch (err) {
+        console.error('Error in profile handling:', err);
+        // Create a minimal profile to continue
+        basicProfileData = {
+          id: userId,
+          name: sessionData.session.user.user_metadata?.name || 'User',
+          email: sessionData.session.user.email || 'unknown@example.com',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
       }
 
       // If we still don't have a profile, create a minimal one from auth data
@@ -594,49 +640,97 @@ export class AuthService {
       }
 
       // Now get the extended profile data from profile_users
-      const { data: profileUserData, error: profileUserError } = await supabase
-        .from('profile_users')
-        .select('*')
-        .eq('profile_id', userId)
-        .maybeSingle();
+      let extendedProfileData: any = null;
 
-      if (profileUserError) {
-        console.error('Error fetching profile_users in getCurrentUser:', profileUserError);
-        // Continue despite error - we'll use defaults
-      }
+      try {
+        const { data: profileUserData, error: profileUserError } = await supabase
+          .from('profile_users')
+          .select('*')
+          .eq('profile_id', userId)
+          .maybeSingle();
 
-      // If profile_users doesn't exist, create it
-      let extendedProfileData = profileUserData;
-      if (!extendedProfileData) {
-        console.log('profile_users not found for user, creating one:', userId);
+        if (profileUserError) {
+          const formattedError = handleSupabaseError(profileUserError);
+          console.error('Error fetching profile_users in getCurrentUser:', formattedError);
+          // Continue despite error - we'll use defaults
+        } else {
+          extendedProfileData = profileUserData;
+        }
 
-        try {
-          // Create profile_users entry
+        // If profile_users doesn't exist, create it
+        if (!extendedProfileData) {
+          console.log('profile_users not found for user, creating one:', userId);
+
+          // Make sure we have the basic profile data
+          if (!basicProfileData || !basicProfileData.email) {
+            console.error('Cannot create profile_users: Basic profile data is missing');
+            throw new Error('Basic profile data is required to create profile_users');
+          }
+
+          // Create profile_users entry with proper error handling
+          const profileUserData = {
+            profile_id: userId,
+            name: basicProfileData.name || 'User',
+            email: basicProfileData.email,
+            phone: '',
+            address: '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+
+          console.log('Creating profile_users with data:', {
+            ...profileUserData,
+            profile_id: profileUserData.profile_id.substring(0, 8) + '...'
+          });
+
+          // First try with insert
           const { data: newProfileUser, error: createExtendedError } = await supabase
             .from('profile_users')
-            .insert([
-              {
-                profile_id: userId,
-                name: basicProfileData.name,
-                email: basicProfileData.email,
-                phone: '',
-                address: '',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-            ])
+            .insert([profileUserData])
             .select()
             .single();
 
           if (createExtendedError) {
-            console.error('Error creating profile_users in getCurrentUser:', createExtendedError);
-            // Continue despite error
+            const formattedError = handleSupabaseError(createExtendedError);
+            console.error('Error creating profile_users in getCurrentUser:', formattedError);
+
+            // Try with upsert as a fallback
+            console.log('Trying fallback profile_users creation with upsert...');
+            const { data: fallbackProfileUser, error: fallbackError } = await supabase
+              .from('profile_users')
+              .upsert([profileUserData], {
+                onConflict: 'profile_id',
+                returning: 'representation'
+              });
+
+            if (fallbackError) {
+              console.error('Fallback profile_users creation also failed:', handleSupabaseError(fallbackError));
+            } else if (fallbackProfileUser && fallbackProfileUser.length > 0) {
+              console.log('Fallback profile_users creation succeeded');
+              extendedProfileData = fallbackProfileUser[0];
+            }
           } else {
+            console.log('Profile_users created successfully');
             extendedProfileData = newProfileUser;
           }
-        } catch (err) {
-          console.error('Unexpected error creating profile_users in getCurrentUser:', err);
+
+          // If we still don't have the data, try to fetch it one more time
+          if (!extendedProfileData) {
+            const { data: refetchedData } = await supabase
+              .from('profile_users')
+              .select('*')
+              .eq('profile_id', userId)
+              .maybeSingle();
+
+            if (refetchedData) {
+              console.log('Retrieved newly created profile_users');
+              extendedProfileData = refetchedData;
+            }
+          }
         }
+      } catch (err) {
+        console.error('Error in profile_users handling:', err);
+        // We'll use defaults below
       }
 
       // If we still don't have extended profile data, use defaults

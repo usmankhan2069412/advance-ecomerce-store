@@ -28,32 +28,39 @@ const shippingSchema = z.object({
 const paymentSchema = z.object({
   cardNumber: z
     .string()
-    .min(16, 'Valid card number is required')
+    .min(16, 'Card number must be at least 16 digits')
     .max(19, 'Card number too long')
-    .refine((val) => /^[0-9\s]+$/.test(val), 'Card number can only contain digits'),
-  cardholderName: z.string().min(2, 'Cardholder name is required'),
+    .refine(val => /^\d{16,19}$/.test(val.replace(/\s+/g, '')), 'Card number must contain only digits'),
+
+  cardholderName: z
+    .string()
+    .min(2, 'Cardholder name is required'),
+
   expiryDate: z
     .string()
-    .min(5, 'Valid expiry date is required')
-    .refine((val) => {
-      // More lenient validation for demo purposes
-      const [month, year] = val.split('/');
+    .regex(/^(0[1-9]|1[0-2])(\/|-)?([0-9]{2})$/, 'Invalid expiry date format (MM/YY or MM-YY)')
+    .refine(val => {
+      // Extract month and year from various formats
+      const [monthPart, yearPart] = val.split(/[\/-]/);
+      const monthStr = monthPart?.padStart(2, '0') || val.slice(0,2);
+      const yearStr = (yearPart || val.slice(-2)).padStart(2, '0');
+      
+      const month = parseInt(monthStr, 10);
+      const year = 2000 + parseInt(yearStr, 10);
+
+      // Get last day of expiry month
+      const expiryDate = new Date(year, month, 0);
       const currentDate = new Date();
-      const currentYear = currentDate.getFullYear() % 100;
-      const currentMonth = currentDate.getMonth() + 1;
-      
-      // Allow any future date for demo
-      const inputYear = parseInt(year);
-      const inputMonth = parseInt(month);
-      
-      return inputYear >= currentYear || (inputYear === currentYear && inputMonth >= currentMonth);
-    }, 'Expiry date must be in the future'),
+
+      // Compare timestamps to account for end-of-month
+      return expiryDate.getTime() > currentDate.getTime();
+    }, 'Card has expired or invalid date'),
+
   cvv: z
     .string()
-    .min(3, 'Valid CVV is required')
-    .max(4, 'CVV too long')
-    .refine((val) => /^\d+$/.test(val), 'CVV can only contain digits'),
+    .regex(/^\d{3,4}$/, 'CVV must be 3 or 4 digits'),
 });
+
 
 type CheckoutStep = 'shipping' | 'payment' | 'review';
 type ShippingMethod = 'standard' | 'express' | 'overnight';
@@ -119,18 +126,36 @@ export default function CheckoutPage() {
         return;
       }
 
-      // More lenient expiry date validation for demo
-      const [month, year] = data.expiryDate.split('/');
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear() % 100;
-      const currentMonth = currentDate.getMonth() + 1;
-      
-      const inputYear = parseInt(year);
-      const inputMonth = parseInt(month);
-      
-      if (inputYear < currentYear || (inputYear === currentYear && inputMonth < currentMonth)) {
-        toast.error('Please enter a future expiry date');
-        return;
+      // Validate expiry date format and expiration
+      if (data.expiryDate) {
+        // Check format
+        if (!/^(0[1-9]|1[0-2])\/([0-9]{2})$/.test(data.expiryDate)) {
+          toast.error('Please enter a valid expiry date in MM/YY format');
+          return;
+        }
+
+        const [month, year] = data.expiryDate.split('/');
+        const inputMonth = parseInt(month, 10);
+        let inputYear = parseInt(year, 10);
+
+        // Convert to 4-digit year
+        inputYear = 2000 + inputYear;
+
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth() + 1;
+
+        // Validate month range
+        if (inputMonth < 1 || inputMonth > 12) {
+          toast.error('Please enter a valid month (01-12)');
+          return;
+        }
+
+        // Check if card is expired
+        if (inputYear < currentYear || (inputYear === currentYear && inputMonth < currentMonth)) {
+          toast.error('Card has expired. Please use a valid card');
+          return;
+        }
       }
 
       if (data.cvv.length < 3) {
@@ -152,7 +177,7 @@ export default function CheckoutPage() {
       toast.error('Please enter a promo code');
       return;
     }
-    
+
     applyPromoCode(promoCode);
     setIsPromoApplied(true);
     toast.success('Promo code applied successfully!');
@@ -161,14 +186,47 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async () => {
     setIsProcessing(true);
-    
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Success
-      router.push('/order-confirmation');
+      if (!shippingData || !paymentData) {
+        toast.error('Missing order information. Please try again.');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Calculate final total
+      const finalTotal = subtotal + getShippingCost() + tax - promoCodeDiscount;
+
+      // Save order to database
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cartItems,
+          shippingData,
+          paymentData,
+          shippingMethod,
+          subtotal,
+          tax,
+          shippingCost: getShippingCost(),
+          discount: promoCodeDiscount,
+          promoCode: isPromoApplied ? promoCode : null,
+          totalAmount: finalTotal,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create order');
+      }
+
+      // Success - redirect to order confirmation with order number
+      router.push(`/order-confirmation?orderNumber=${result.orderNumber}`);
     } catch (error) {
+      console.error('Order error:', error);
       toast.error('There was an error processing your order. Please try again.');
       setIsProcessing(false);
     }
@@ -194,14 +252,15 @@ export default function CheckoutPage() {
 
   // Format expiry date
   const formatExpiryDate = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    
-    if (v.length >= 2) {
-      return `${v.substring(0, 2)}/${v.substring(2, 4)}`;
-    }
-    
-    return v;
+    // Remove non-digits and limit to 4 characters
+    const v = value.replace(/\D/g, '').slice(0,4);
+    if (!v) return '';
+
+    // Automatically add slash after 2 digits
+    if (v.length <= 2) return v;
+    return `${v.slice(0,2)}/${v.slice(2)}`;
   };
+
 
   // Calculate shipping cost based on method
   const getShippingCost = () => {
@@ -279,16 +338,16 @@ export default function CheckoutPage() {
   const renderOrderSummary = () => (
     <Card className="p-6 sticky top-4">
       <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-      
+
       {/* Items */}
       <div className="max-h-60 overflow-y-auto mb-4">
         {cartItems.map((item) => (
           <div key={item.id} className="flex items-center gap-3 py-2 border-b">
             <div className="relative w-16 h-16 bg-gray-100 rounded overflow-hidden">
-              <Image 
-                src={item.image} 
-                alt={item.name} 
-                fill 
+              <Image
+                src={item.image}
+                alt={item.name}
+                fill
                 className="object-cover"
               />
             </div>
@@ -305,7 +364,7 @@ export default function CheckoutPage() {
           </div>
         ))}
       </div>
-      
+
       {/* Promo code */}
       {currentStep !== 'review' && (
         <div className="mb-4">
@@ -326,7 +385,7 @@ export default function CheckoutPage() {
           )}
         </div>
       )}
-      
+
       {/* Shipping method selection */}
       {currentStep === 'shipping' && (
         <div className="mb-4">
@@ -371,7 +430,7 @@ export default function CheckoutPage() {
           </div>
         </div>
       )}
-      
+
       {/* Cost breakdown */}
       <div className="space-y-2 py-4 border-t border-b mb-4">
         <div className="flex justify-between">
@@ -397,12 +456,12 @@ export default function CheckoutPage() {
           <span>${finalTotal.toFixed(2)}</span>
         </div>
       </div>
-      
+
       {/* Action buttons based on step */}
       {currentStep === 'review' && (
-        <Button 
-          className="w-full" 
-          size="lg" 
+        <Button
+          className="w-full"
+          size="lg"
           onClick={handlePlaceOrder}
           isLoading={isProcessing}
           disabled={isProcessing}
@@ -537,7 +596,7 @@ export default function CheckoutPage() {
                             <span className="font-medium">$10.00</span>
                           </div>
                         </div>
-                        
+
                         <div
                           className={`p-4 border rounded-lg cursor-pointer transition-all ${
                             shippingMethod === 'express' ? 'border-primary bg-primary/5' : 'border-gray-200'
@@ -552,7 +611,7 @@ export default function CheckoutPage() {
                             <span className="font-medium">$15.00</span>
                           </div>
                         </div>
-                        
+
                         <div
                           className={`p-4 border rounded-lg cursor-pointer transition-all ${
                             shippingMethod === 'overnight' ? 'border-primary bg-primary/5' : 'border-gray-200'
@@ -569,7 +628,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <Button
                       type="submit"
                       className="w-full py-6 mt-4 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-primary/20 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-primary/30"
@@ -581,8 +640,8 @@ export default function CheckoutPage() {
               )}
 
               {currentStep === 'payment' && (
-                <Card className="p-6">
-                  <h2 className="text-xl font-semibold mb-6 inline-flex items-center">
+                <Card className="p-8 border-0 shadow-xl rounded-2xl bg-white backdrop-blur-sm bg-opacity-95 transition-shadow duration-500">
+                  <h2 className="text-2xl font-bold mb-6 inline-flex items-center">
                     <CreditCard className="mr-3 h-6 w-6 text-primary" /> Payment Information
                   </h2>
                   <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 flex items-center">
@@ -595,123 +654,142 @@ export default function CheckoutPage() {
                   </div>
                   <Form {...paymentForm}>
                     <form onSubmit={paymentForm.handleSubmit(handlePaymentSubmit)} className="space-y-6">
+                      {/* Cardholder Name */}
                       <FormField
                         control={paymentForm.control}
                         name="cardholderName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Cardholder Name</FormLabel>
+                            <FormLabel className="text-sm font-medium text-gray-700">Cardholder Name</FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
+                              <Input
+                                {...field}
                                 placeholder="Name as shown on card"
-                                className="h-11"
+                                className="h-12 rounded-lg border-gray-300 focus:border-primary focus:ring focus:ring-primary/20 transition-all duration-200 shadow-sm"
                               />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-red-500 text-xs mt-1" />
                           </FormItem>
                         )}
                       />
+
+                      {/* Card Number */}
                       <FormField
                         control={paymentForm.control}
                         name="cardNumber"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Card Number</FormLabel>
+                            <FormLabel className="text-sm font-medium text-gray-700">Card Number</FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
-                                placeholder="1234 5678 9012 3456"
-                                value={formatCardNumber(field.value)}
-                                onChange={(e) => {
-                                  const value = e.target.value.replace(/\s/g, '');
-                                  if (value.length <= 16 && /^\d*$/.test(value)) {
-                                    field.onChange(value);
-                                  }
-                                }}
-                                className="h-11"
-                                maxLength={19}
-                              />
+                              <div className="relative">
+                                <Input
+                                  {...field}
+                                  placeholder="1234 5678 9012 3456"
+                                  value={formatCardNumber(field.value)}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '');
+                                    if (value.length <= 19) field.onChange(value);
+                                  }}
+                                  className="h-12 pl-10 rounded-lg border-gray-300 focus:border-primary focus:ring focus:ring-primary/20 transition-all duration-200 shadow-sm"
+                                  maxLength={19}
+                                />
+                                <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                              </div>
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-red-500 text-xs mt-1" />
                           </FormItem>
                         )}
                       />
-                      <div className="grid grid-cols-2 gap-4">
+
+                      <div className="grid grid-cols-2 gap-6">
+                        {/* Expiry Date */}
                         <FormField
                           control={paymentForm.control}
                           name="expiryDate"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Expiry Date</FormLabel>
+                              <FormLabel className="text-sm font-medium text-gray-700">Expiry Date</FormLabel>
                               <FormControl>
-                                <Input 
-                                  {...field} 
-                                  placeholder="MM/YY"
-                                  value={formatExpiryDate(field.value)}
-                                  onChange={(e) => {
-                                    const value = e.target.value.replace(/\D/g, '');
-                                    if (value.length <= 4) {
-                                      field.onChange(value);
-                                    }
-                                  }}
-                                  className="h-11"
-                                  maxLength={5}
-                                />
+                                <div className="relative">
+                                  <Input
+                                    {...field}
+                                    placeholder="MM/YY"
+                                    value={formatExpiryDate(field.value)}
+                                    onChange={(e) => {
+                                      const value = e.target.value.replace(/\D/g, '');
+                                      if (value.length <= 4) field.onChange(value);
+                                    }}
+                                    className="h-12 rounded-lg border-gray-300 focus:border-primary focus:ring focus:ring-primary/20 transition-all duration-200 shadow-sm"
+                                    maxLength={5}
+                                  />
+                                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
+                                    MM/YY
+                                  </div>
+                                </div>
                               </FormControl>
-                              <FormMessage />
+                              <p className="text-xs text-gray-500 mt-1">Enter as MM/YY (e.g., 12/27)</p>
+                              <FormMessage className="text-red-500 text-xs mt-1" />
                             </FormItem>
                           )}
                         />
+
+                        {/* CVV */}
                         <FormField
                           control={paymentForm.control}
                           name="cvv"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>
+                              <FormLabel className="text-sm font-medium text-gray-700">
                                 <div className="flex items-center">
                                   CVV
-                                  <span className="ml-1 text-gray-400 hover:text-gray-600 cursor-help" title="3 or 4 digit security code on the back of your card">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                  <span
+                                    className="ml-1 text-gray-400 hover:text-gray-600 cursor-help"
+                                    title="3 or 4 digit security code on the back of your card"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                        clipRule="evenodd"
+                                      />
                                     </svg>
                                   </span>
                                 </div>
                               </FormLabel>
                               <FormControl>
-                                <Input 
-                                  {...field} 
+                                <Input
+                                  {...field}
                                   type="password"
-                                  placeholder="123"
+                                  placeholder="•••"
                                   onChange={(e) => {
                                     const value = e.target.value.replace(/\D/g, '');
-                                    if (value.length <= 4) {
-                                      field.onChange(value);
-                                    }
+                                    if (value.length <= 4) field.onChange(value);
                                   }}
-                                  className="h-11"
+                                  className="h-12 rounded-lg border-gray-300 focus:border-primary focus:ring focus:ring-primary/20 transition-all duration-200 shadow-sm"
                                   maxLength={4}
                                 />
                               </FormControl>
-                              <FormMessage />
+                              <FormMessage className="text-red-500 text-xs mt-1" />
                             </FormItem>
                           )}
                         />
                       </div>
-                      <div className="pt-6 flex gap-4">
-                        <Button 
+
+                      {/* Navigation Buttons */}
+                      <div className="pt-8 flex gap-4">
+                        <Button
                           type="button"
-                          variant="outline" 
+                          variant="outline"
                           onClick={() => setCurrentStep('shipping')}
-                          className="px-6"
+                          className="px-6 py-3 border-2 rounded-xl hover:bg-gray-50 transition-colors duration-300"
                         >
-                          <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                          <ChevronLeft className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" /> Back
                         </Button>
-                        <Button 
+                        <Button
                           type="submit"
-                          className="flex-1 bg-primary hover:bg-primary/90"
+                          className="flex-1 py-6 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white text-lg font-medium rounded-xl shadow-lg shadow-primary/20 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-primary/30"
                         >
-                          Continue to Review <ChevronRight className="ml-2 h-4 w-4" />
+                          Continue to Review <ChevronRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
                         </Button>
                       </div>
                     </form>
@@ -804,7 +882,7 @@ export default function CheckoutPage() {
               )}
             </Card>
           </div>
-          
+
           <div className="lg:col-span-1">
             {renderOrderSummary()}
           </div>

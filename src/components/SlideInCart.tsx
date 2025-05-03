@@ -111,7 +111,7 @@ export default function SlideInCart({ isOpen, onClose }: SlideInCartProps) {
               ) : (
                 <div className="space-y-4">
                   {items.map((item) => (
-                    <div key={item.id} className="flex gap-3 pb-4 border-b">
+                    <div key={`${item.id}-${item.size || ''}-${item.color || ''}`} className="flex gap-3 pb-4 border-b">
                       <div className="relative w-20 h-20 bg-gray-100 rounded overflow-hidden">
                         <Image
                           src={item.image}
