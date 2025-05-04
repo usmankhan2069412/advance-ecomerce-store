@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { X, ShoppingBag, ChevronRight, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';

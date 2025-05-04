@@ -1,4 +1,4 @@
-import { supabase, User, handleSupabaseError } from '@/lib/supabase-client';
+import { supabase, User } from '@/lib/supabase-client';
 
 export interface UserProfile {
   id: string;
@@ -14,6 +14,35 @@ export interface AuthError {
   message: string;
   code?: string;
   email?: string;
+}
+
+/**
+ * Helper function to safely handle Supabase errors
+ * @param error Any error object from Supabase
+ * @returns Formatted error object with message and code
+ */
+function handleSupabaseError(error: any): { message: string; code?: string } {
+  if (!error) return { message: 'Unknown error' };
+
+  // If it's already a string, just return it
+  if (typeof error === 'string') return { message: error };
+
+  // Extract the most useful error information
+  const message = error.message || error.error_description || 'An error occurred';
+  const code = error.code || error.statusCode || error.status || undefined;
+
+  // Log detailed error in development
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Supabase error details:', {
+      message,
+      code,
+      details: error.details,
+      hint: error.hint,
+      fullError: error
+    });
+  }
+
+  return { message, code };
 }
 
 /**

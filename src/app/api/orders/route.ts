@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-client";
 import { v4 as uuidv4 } from 'uuid';
 import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { Database } from '@/types/supabase';
 
 export async function POST(req: Request) {
@@ -18,6 +17,8 @@ export async function POST(req: Request) {
       discount,
       promoCode,
       totalAmount,
+      userProfile: userProfileFromRequest,
+      isGuestCheckout
     } = await req.json();
 
     if (!cartItems || !shippingData || !paymentData) {
@@ -28,22 +29,31 @@ export async function POST(req: Request) {
     }
 
     // Create a Supabase client using server components
-    const cookieStore = cookies();
-    const supabaseServerClient = createServerComponentClient<Database>({ cookies: () => cookieStore });
+    const supabaseServerClient = await createClient();
 
     // Get user ID from session if available
     let userId = '00000000-0000-0000-0000-000000000000'; // Default anonymous user ID
 
-    try {
-      // Get the session using the server client
-      const { data: { session } } = await supabaseServerClient.auth.getSession();
+    if (isGuestCheckout) {
+      console.log('Processing guest checkout');
+      // Use the default anonymous user ID for guest checkouts
+    } else if (userProfileFromRequest && !userProfileFromRequest.id.startsWith('temp-')) {
+      // If we have a valid user profile from the request, use that ID
+      userId = userProfileFromRequest.id;
+      console.log('Using user ID from request:', userId);
+    } else {
+      try {
+        // Get the session using the server client
+        const { data: { session } } = await supabaseServerClient.auth.getSession();
 
-      if (session?.user?.id) {
-        userId = session.user.id;
+        if (session?.user?.id) {
+          userId = session.user.id;
+          console.log('Using user ID from session:', userId);
+        }
+      } catch (error) {
+        console.error('Error getting user session:', error);
+        // Continue with anonymous user ID if there's an error
       }
-    } catch (error) {
-      console.error('Error getting user session:', error);
-      // Continue with anonymous user ID if there's an error
     }
 
     // Generate a unique order number
@@ -77,6 +87,9 @@ export async function POST(req: Request) {
       cardNumber: `**** **** **** ${paymentData.cardNumber.slice(-4)}`,
       expiryDate: paymentData.expiryDate,
     };
+
+    // Create a Supabase client
+    const supabase = await createClient();
 
     // Insert order into database
     const { data: orderData, error: orderError } = await supabase
@@ -160,8 +173,7 @@ export async function GET(req: Request) {
     const userOrders = url.searchParams.get('userOrders');
 
     // Create a Supabase client using server components
-    const cookieStore = cookies();
-    const supabaseServerClient = createServerComponentClient<Database>({ cookies: () => cookieStore });
+    const supabaseServerClient = await createClient();
 
     // Get user ID from session if available
     let userId = null;
@@ -176,6 +188,9 @@ export async function GET(req: Request) {
     } catch (error) {
       console.error('Error getting user session:', error);
     }
+
+    // Create a Supabase client
+    const supabase = await createClient();
 
     if (orderNumber) {
       // Get a specific order by order number
