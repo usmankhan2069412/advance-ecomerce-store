@@ -11,8 +11,16 @@ const nextConfig = {
             protocol: 'https',
             hostname: 'lbmatrvcyiefxukntwsu.supabase.co',
           },
+          {
+            protocol: 'https',
+            hostname: 'placehold.co',
+          },
         ],
+        dangerouslyAllowSVG: true,
+        contentDispositionType: 'attachment',
+        contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
       },
+
 
     reactStrictMode: true,
     webpack: (config, { dev }) => {

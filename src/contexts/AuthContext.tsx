@@ -196,53 +196,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
     try {
       console.log('AuthContext: Starting login process for email:', email);
 
+      // Validate inputs before attempting login
+      if (!email || !email.trim()) {
+        setError('Email is required');
+        return false;
+      }
+
+      if (!password) {
+        setError('Password is required');
+        return false;
+      }
+
+      // Sanitize email
+      const sanitizedEmail = email.trim().toLowerCase();
+
+      // Log sanitized credentials (password redacted for security)
+      console.log('AuthContext: Login attempt with:', {
+        email: sanitizedEmail,
+        passwordLength: password.length
+      });
+
       // Use retry with backoff for more reliable login
       const { user, error } = await retryWithBackoff(
-        () => AuthService.signIn(email, password),
-        2, // Max 2 retries (3 attempts total)
+        () => AuthService.signIn(sanitizedEmail, password),
+        1, // Max 1 retry (2 attempts total) - reduced to avoid locking accounts
         500 // Start with 500ms delay
       );
 
       if (error) {
+        // Log the raw error for debugging
+        console.log('AuthContext: Raw login error:', error);
+
         // Ensure error is a proper object with required properties
+        // Handle cases where error might be empty, null, or not an object
         const safeError = {
-          message: error.message || 'An unknown error occurred',
-          code: error.code || 'unknown_error',
-          email: error.email
+          message: error && typeof error === 'object' && error.message
+            ? error.message
+            : (typeof error === 'string' ? error : 'An unknown error occurred'),
+          code: error && typeof error === 'object' && error.code
+            ? error.code
+            : 'unknown_error',
+          email: error && typeof error === 'object' && error.email
+            ? error.email
+            : null
         };
 
         console.error('AuthContext: Login error:', safeError);
         setError(safeError.message);
 
         // Add additional debugging information
-        if (safeError.code) {
-          console.log('AuthContext: Error code:', safeError.code);
+        console.log('AuthContext: Error code:', safeError.code);
 
-          // Handle email not confirmed error
-          if (safeError.code === 'email_not_confirmed' && safeError.email) {
-            setLastUnconfirmedEmail(safeError.email);
-          }
+        // Handle email not confirmed error
+        if (safeError.code === 'email_not_confirmed' && safeError.email) {
+          setLastUnconfirmedEmail(safeError.email);
+        }
 
-          // If we get a profile-related error, try to fix it
-          if (safeError.message.includes('profile') || safeError.code.includes('profile')) {
-            console.log('Attempting to fix profile issues...');
-            const fixResult = await fixProfileIssues();
-            if (fixResult.success) {
-              // Try login again after fixing profiles
-              console.log('Profile issues fixed, retrying login...');
-              const retryResult = await AuthService.signIn(email, password);
-              if (!retryResult.error && retryResult.user) {
-                console.log('Login successful after fixing profiles');
-                setUserProfile(retryResult.user);
-                setIsAuthenticated(true);
+        // If we get a profile-related error, try to fix it
+        if (safeError.message.includes('profile') || safeError.code.includes('profile')) {
+          console.log('Attempting to fix profile issues...');
+          const fixResult = await fixProfileIssues();
+          if (fixResult.success) {
+            // Try login again after fixing profiles
+            console.log('Profile issues fixed, retrying login...');
+            const retryResult = await AuthService.signIn(email, password);
+            if (!retryResult.error && retryResult.user) {
+              console.log('Login successful after fixing profiles');
+              setUserProfile(retryResult.user);
+              setIsAuthenticated(true);
 
-                // Store a flag in localStorage to help with session persistence
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('userAuthenticated', 'true');
-                }
-
-                return true;
+              // Store a flag in localStorage to help with session persistence
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('userAuthenticated', 'true');
               }
+
+              return true;
             }
           }
         }
@@ -267,8 +295,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
       setError('Login failed. Please try again.');
       return false;
     } catch (err) {
+      // Log the raw error for debugging
       console.error("AuthContext: Unexpected login error:", err);
-      setError("An unexpected error occurred during login. Please try again later.");
+
+      // Create a more detailed error message
+      let errorMessage = "An unexpected error occurred during login. Please try again later.";
+
+      // Try to extract more information from the error
+      if (err) {
+        if (typeof err === 'object') {
+          // Log all properties of the error object for debugging
+          console.log('Error object properties:', Object.getOwnPropertyNames(err));
+
+          if ('message' in err) {
+            errorMessage = `Login error: ${(err as any).message}`;
+          } else if ('toString' in err && typeof (err as any).toString === 'function') {
+            errorMessage = `Login error: ${(err as any).toString()}`;
+          }
+        } else if (typeof err === 'string') {
+          errorMessage = `Login error: ${err}`;
+        }
+      }
+
+      setError(errorMessage);
 
       // Try to fix profile issues as a last resort
       try {

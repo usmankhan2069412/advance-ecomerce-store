@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { AuthService } from "@/services/auth-service";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
@@ -155,7 +156,39 @@ export default function AuthPage() {
       setShowEmailConfirmation(false);
       setResendSuccess(false);
 
+      // Validate email format before attempting login
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(loginEmail.trim())) {
+        setLoginError("Please enter a valid email address");
+        return;
+      }
+
+      // Validate password is not empty
+      if (!loginPassword) {
+        setLoginError("Password is required");
+        return;
+      }
+
       console.log('Auth page: Attempting login with email:', loginEmail.trim());
+
+      // First, try to test the credentials directly to get a clear error message
+      try {
+        const testResult = await AuthService.testLoginCredentials(loginEmail.trim(), loginPassword);
+        console.log('Auth page: Credential test result:', testResult);
+
+        // If the test failed with a specific error, show it to the user
+        if (!testResult.success) {
+          if (testResult.message.includes('Invalid login credentials')) {
+            setLoginError("The email or password you entered is incorrect. Please try again.");
+            return;
+          }
+        }
+      } catch (testError) {
+        console.error('Auth page: Error testing credentials:', testError);
+        // Continue with normal login flow even if the test fails
+      }
+
+      // Proceed with normal login
       const success = await login(loginEmail.trim(), loginPassword);
 
       if (success) {
@@ -628,6 +661,16 @@ export default function AuthPage() {
                       <div>
                         <h3 className="font-medium text-red-800 mb-1">Login failed</h3>
                         <p className="text-sm">{loginError}</p>
+                        {loginError.includes("incorrect") && (
+                          <div className="mt-2 text-xs text-red-600">
+                            <p>Please check that:</p>
+                            <ul className="list-disc ml-4 mt-1 space-y-1">
+                              <li>Your email address is entered correctly</li>
+                              <li>Your password is correct (check caps lock)</li>
+                              <li>You have registered an account with this email</li>
+                            </ul>
+                          </div>
+                        )}
                         <p className="text-xs mt-2 text-red-600">
                           If you continue to experience issues, please contact support at support@aetheria.com
                         </p>

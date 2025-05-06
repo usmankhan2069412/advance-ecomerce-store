@@ -268,6 +268,58 @@ export class AuthService {
   }
 
   /**
+   * Test login credentials directly with Supabase
+   * This is a helper method to debug login issues
+   * @param email User email
+   * @param password User password
+   * @returns Success or error message
+   */
+  static async testLoginCredentials(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      // Sanitize email
+      const sanitizedEmail = email.trim().toLowerCase();
+
+      console.log('Testing login credentials for:', sanitizedEmail);
+
+      // Try to sign in directly with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: sanitizedEmail,
+        password,
+      });
+
+      if (error) {
+        console.log('Test login failed:', error.message);
+        return {
+          success: false,
+          message: `Login failed: ${error.message}`
+        };
+      }
+
+      if (data && data.user) {
+        console.log('Test login successful for user:', data.user.id);
+        return {
+          success: true,
+          message: `Login successful for ${data.user.email}`
+        };
+      }
+
+      return {
+        success: false,
+        message: 'No user returned from login test'
+      };
+    } catch (error: any) {
+      console.error('Test login error:', error);
+      return {
+        success: false,
+        message: `Exception during login test: ${error?.message || 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
    * Sign in a user
    * @param email User email
    * @param password User password
@@ -299,19 +351,77 @@ export class AuthService {
       let authData: any = null;
 
       try {
-        const result = await supabase.auth.signInWithPassword({
-          email: sanitizedEmail,
-          password,
-        });
+        let authError: any = null;
 
-        authData = result.data;
-        const authError = result.error;
+        // First, test the credentials directly to get a clear error message
+        const testResult = await AuthService.testLoginCredentials(sanitizedEmail, password);
+        console.log('Credential test result:', testResult);
 
-        console.log('Sign in response:', {
-          session: authData?.session ? 'Session exists' : 'No session',
-          user: authData?.user ? 'User exists' : 'No user',
-          error: authError ? authError.message : 'No error'
-        });
+        // If the test failed with "Invalid login credentials", we can provide a better error message
+        if (!testResult.success && testResult.message.includes('Invalid login credentials')) {
+          console.log('Login credentials are invalid - either the email or password is incorrect');
+
+          // Check if the user exists but password is wrong
+          const { data: userExists } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', sanitizedEmail)
+            .maybeSingle();
+
+          if (userExists) {
+            console.log('User exists but password is incorrect');
+            return {
+              user: null,
+              error: {
+                message: 'The password you entered is incorrect. Please try again.',
+                code: 'invalid_password'
+              }
+            };
+          } else {
+            console.log('User with this email does not exist');
+            return {
+              user: null,
+              error: {
+                message: 'No account found with this email address. Please check your email or sign up.',
+                code: 'user_not_found'
+              }
+            };
+          }
+        }
+
+        try {
+          // Proceed with normal login flow
+          console.log('Proceeding with normal login flow for:', sanitizedEmail);
+          const result = await supabase.auth.signInWithPassword({
+            email: sanitizedEmail,
+            password,
+          });
+
+          authData = result.data;
+          authError = result.error;
+
+          // Log more detailed information about the response
+          console.log('Sign in response:', {
+            session: authData?.session ? 'Session exists' : 'No session',
+            user: authData?.user ? 'User exists' : 'No user',
+            error: authError ? authError.message : 'No error'
+          });
+
+          // Log the full error object for debugging
+          if (authError) {
+            console.log('Sign in error details:', {
+              message: authError.message,
+              code: authError.code,
+              status: authError.status,
+              details: authError.details,
+              hint: authError.hint,
+              fullError: JSON.stringify(authError)
+            });
+          }
+        } catch (signInCallError) {
+          console.error('Exception during supabase.auth.signInWithPassword call:', signInCallError);
+          throw signInCallError;
+        }
 
         if (authError) {
           console.error('Auth signin error:', authError);

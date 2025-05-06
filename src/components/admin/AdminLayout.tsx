@@ -103,13 +103,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     {
       name: "Users",
       icon: <Users className="w-5 h-5" />,
-      dropdown: true,
+      dropdown: false,
       key: "users",
-      children: [
-        { name: "All Users", path: "/admin/users" },
-        { name: "Add User", path: "/admin/users/add" },
-        { name: "Roles", path: "/admin/roles" },
-      ],
+      path: "/admin/users",
     },
     {
       name: "Orders",
@@ -120,6 +116,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         { name: "All Orders", path: "/admin/orders" },
         { name: "Pending", path: "/admin/orders/pending" },
         { name: "Completed", path: "/admin/orders/completed" },
+        { name: "Invoices", path: "/admin/orders/invoices" },
+        { name: "Shipping", path: "/admin/orders/shipping" },
+        { name: "Refunds", path: "/admin/orders/refunds" },
       ],
     },
     {

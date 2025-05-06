@@ -1,4 +1,6 @@
-import React from "react";
+'use client';
+
+import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,9 +32,163 @@ import {
   FileText,
   Download,
   Printer,
+  RefreshCw,
+  Mail,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+
+// Define types for order data
+interface OrderItem {
+  id: string;
+  product_name: string;
+  quantity: number;
+  price: number;
+  product_image?: string;
+}
+
+interface ShippingAddress {
+  fullName: string;
+  email: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  phone: string;
+}
+
+interface Order {
+  id: string;
+  order_number: string;
+  profile_id: string;
+  status: string;
+  total_amount: number;
+  subtotal: number;
+  tax: number;
+  shipping_cost: number;
+  discount: number;
+  payment_status: string;
+  payment_method: string;
+  shipping_method: string;
+  shipping_address: ShippingAddress;
+  tracking_number: string | null;
+  created_at: string;
+  updated_at: string;
+  order_items: OrderItem[];
+}
+
+interface Invoice {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  date: string;
+  customer: string;
+  amount: number;
+  status: string;
+}
 
 export default function InvoicesPage() {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/orders');
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch orders');
+        }
+
+        const data = await response.json();
+
+        // Transform orders into invoices
+        const transformedInvoices = data.map((order: Order) => ({
+          id: `INV-${order.order_number.replace('ORD-', '')}`,
+          orderId: order.id,
+          orderNumber: order.order_number,
+          date: new Date(order.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          customer: order.shipping_address.fullName,
+          amount: order.total_amount,
+          status: order.payment_status === 'paid' ? 'Paid' : 'Pending',
+        }));
+
+        setInvoices(transformedInvoices);
+      } catch (err: any) {
+        console.error('Error fetching orders:', err);
+        setError(err.message || 'An error occurred while fetching orders');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
+  // Filter invoices based on search query
+  const filteredInvoices = invoices.filter(invoice =>
+    invoice.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    invoice.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    invoice.customer.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleDownloadInvoice = (invoiceId: string) => {
+    toast.success(`Invoice ${invoiceId} downloaded successfully`);
+  };
+
+  const handlePrintInvoice = (invoiceId: string) => {
+    toast.success(`Preparing to print invoice ${invoiceId}`);
+  };
+
+  const handleSendInvoice = (invoiceId: string, customer: string) => {
+    toast.success(`Invoice ${invoiceId} sent to ${customer}`);
+  };
+
+  const handleRefresh = () => {
+    setIsLoading(true);
+    // Refetch orders
+    fetch('/api/orders')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch orders');
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Transform orders into invoices
+        const transformedInvoices = data.map((order: Order) => ({
+          id: `INV-${order.order_number.replace('ORD-', '')}`,
+          orderId: order.id,
+          orderNumber: order.order_number,
+          date: new Date(order.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          customer: order.shipping_address.fullName,
+          amount: order.total_amount,
+          status: order.payment_status === 'paid' ? 'Paid' : 'Pending',
+        }));
+
+        setInvoices(transformedInvoices);
+        toast.success('Invoices refreshed successfully');
+      })
+      .catch(err => {
+        console.error('Error refreshing orders:', err);
+        toast.error('Failed to refresh invoices');
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
   return (
     <AdminLayout>
       <div className="grid gap-6">
@@ -41,9 +197,9 @@ export default function InvoicesPage() {
             Invoice Management
           </h1>
           <div className="flex space-x-2">
-            <Button variant="outline">
-              <FileText className="mr-2 h-4 w-4" />
-              Create Invoice
+            <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              {isLoading ? 'Refreshing...' : 'Refresh'}
             </Button>
           </div>
         </div>
@@ -53,8 +209,10 @@ export default function InvoicesPage() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search invoices..."
+              placeholder="Search by invoice #, order #, or customer..."
               className="pl-8 w-full"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <Button variant="outline">
@@ -71,58 +229,88 @@ export default function InvoicesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.id}</TableCell>
-                    <TableCell>{invoice.orderId}</TableCell>
-                    <TableCell>{invoice.date}</TableCell>
-                    <TableCell>{invoice.customer}</TableCell>
-                    <TableCell>${invoice.amount.toFixed(2)}</TableCell>
-                    <TableCell>{invoice.status}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              (window.location.href = `/admin/orders/invoices/${invoice.id}`)
-                            }
-                          >
-                            View Invoice
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Download className="mr-2 h-4 w-4" />
-                            Download PDF
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Printer className="mr-2 h-4 w-4" />
-                            Print Invoice
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>Send to Customer</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+            {isLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : error ? (
+              <div className="text-center py-8 text-red-500">
+                <p>{error}</p>
+                <Button onClick={handleRefresh} variant="outline" className="mt-4">
+                  Try Again
+                </Button>
+              </div>
+            ) : filteredInvoices.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {searchQuery ? 'No invoices match your search' : 'No invoices found'}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Invoice #</TableHead>
+                    <TableHead>Order #</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredInvoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-medium">{invoice.id}</TableCell>
+                      <TableCell>{invoice.orderNumber}</TableCell>
+                      <TableCell>{invoice.date}</TableCell>
+                      <TableCell>{invoice.customer}</TableCell>
+                      <TableCell>${invoice.amount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            invoice.status === "Paid"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }
+                        >
+                          {invoice.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                (window.location.href = `/admin/orders/invoices/${invoice.orderNumber}`)
+                              }
+                            >
+                              View Invoice
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownloadInvoice(invoice.id)}>
+                              <Download className="mr-2 h-4 w-4" />
+                              Download PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePrintInvoice(invoice.id)}>
+                              <Printer className="mr-2 h-4 w-4" />
+                              Print Invoice
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSendInvoice(invoice.id, invoice.customer)}>
+                              <Mail className="mr-2 h-4 w-4" />
+                              Send to Customer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -133,7 +321,7 @@ export default function InvoicesPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {mockTemplates.map((template) => (
+              {invoiceTemplates.map((template) => (
                 <Card key={template.id} className="overflow-hidden">
                   <div className="aspect-[3/4] bg-muted flex items-center justify-center">
                     <FileText className="h-12 w-12 text-muted-foreground" />
@@ -160,50 +348,7 @@ export default function InvoicesPage() {
   );
 }
 
-const mockInvoices = [
-  {
-    id: "INV-1234",
-    orderId: "ORD-1234",
-    date: "2023-05-15",
-    customer: "Emma Wilson",
-    amount: 1368.49,
-    status: "Paid",
-  },
-  {
-    id: "INV-1235",
-    orderId: "ORD-1235",
-    date: "2023-05-16",
-    customer: "James Smith",
-    amount: 492.05,
-    status: "Pending",
-  },
-  {
-    id: "INV-1236",
-    orderId: "ORD-1236",
-    date: "2023-05-16",
-    customer: "Olivia Johnson",
-    amount: 852.47,
-    status: "Paid",
-  },
-  {
-    id: "INV-1237",
-    orderId: "ORD-1237",
-    date: "2023-05-17",
-    customer: "Noah Williams",
-    amount: 2061.92,
-    status: "Pending",
-  },
-  {
-    id: "INV-1238",
-    orderId: "ORD-1238",
-    date: "2023-05-17",
-    customer: "Sophia Brown",
-    amount: 730.63,
-    status: "Canceled",
-  },
-];
-
-const mockTemplates = [
+const invoiceTemplates = [
   {
     id: "TEMP-1",
     name: "Standard Invoice",
@@ -220,3 +365,5 @@ const mockTemplates = [
     description: "Clean, simple layout focusing on essential information",
   },
 ];
+
+
