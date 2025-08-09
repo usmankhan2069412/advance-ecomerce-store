@@ -12,7 +12,7 @@ type Product = {
   name: string;
   price: number;
   image: string;
-  category: string;
+  category_name: string;
   description: string;
   sustainabilityScore?: number;
   isNew?: boolean;
@@ -67,7 +67,7 @@ export function ProductGrid({
               price={product.price}
               image={product.image}
               description={product.description}
-              category={product.category}
+              category={product.category_name}
               sustainabilityScore={product.sustainabilityScore}
               isNew={product.isNew}
               isFavorite={product.isFavorite}
@@ -83,11 +83,10 @@ export function ProductGrid({
               name={product.name}
               price={product.price}
               image={product.image}
-              category={product.category}
+              category={product.category_name}
               description={product.description}
               sustainabilityScore={product.sustainabilityScore}
               isNew={product.isNew}
-              isFavorite={product.isFavorite}
             />
           ))}
         </div>

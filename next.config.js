@@ -9,7 +9,7 @@ const nextConfig = {
           },
           {
             protocol: 'https',
-            hostname: 'lbmatrvcyiefxukntwsu.supabase.co',
+            hostname: '*.supabase.co', // Use wildcard for Supabase subdomains
           },
           {
             protocol: 'https',
@@ -21,8 +21,13 @@ const nextConfig = {
         contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
       },
 
-
     reactStrictMode: true,
+    
+    // Environment variables validation
+    env: {
+        CUSTOM_KEY: process.env.CUSTOM_KEY,
+    },
+
     webpack: (config, { dev }) => {
         // Only apply custom chunk splitting in production
         if (!dev) {
@@ -52,16 +57,12 @@ const nextConfig = {
                     lib: {
                         test: /[\\/]node_modules[\\/]/,
                         name(module) {
-                            // Get the name. E.g. node_modules/packageName/not/this/part.js
-                            // or node_modules/packageName
                             const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
 
-                            // Some package names need special handling
                             if (packageName === 'tempo-devtools') {
                                 return 'npm.tempo';
                             }
 
-                            // npm package names are URL-safe, but some servers don't like @ symbols
                             return `npm.${packageName.replace('@', '')}`;
                         },
                         priority: 30,
@@ -80,34 +81,60 @@ const nextConfig = {
                     }
                 }
             };
-        }
-
-        // Add error handling for chunk loading
-        const originalEntry = config.entry;
-        config.entry = async () => {
-            const entries = await originalEntry();
 
             // Add chunk error handling to all entries
-            if (entries['main.js'] && !entries['main.js'].includes('chunk-error-handling')) {
-                entries['main.js'].unshift('./src/utils/chunk-error-handling.js');
-            }
+            const originalEntry = config.entry;
+            config.entry = async () => {
+                const entries = await originalEntry();
 
-            return entries;
-        };
+                if (entries['main.js'] && !entries['main.js'].includes('chunk-error-handling')) {
+                    entries['main.js'].unshift('./src/utils/chunk-error-handling.js');
+                }
+
+                return entries;
+            };
+        }
 
         return config;
     },
+    
     experimental: {
         optimizeCss: true,
         scrollRestoration: true
     },
+    
     async headers() {
         return [
             {
                 source: '/api/:path*',
                 headers: [
-                    { key: 'Access-Control-Allow-Origin', value: '*' },
-                    { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE' },
+                    // More restrictive CORS - replace '*' with your actual domain in production
+                    { 
+                        key: 'Access-Control-Allow-Origin', 
+                        value: process.env.NODE_ENV === 'production' 
+                            ? 'https://yourdomain.com' 
+                            : 'http://localhost:3000'
+                    },
+                    { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' },
+                    { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
+                    { key: 'Access-Control-Max-Age', value: '86400' },
+                ]
+            },
+            {
+                source: '/(.*)',
+                headers: [
+                    {
+                        key: 'X-Frame-Options',
+                        value: 'DENY'
+                    },
+                    {
+                        key: 'X-Content-Type-Options',
+                        value: 'nosniff'
+                    },
+                    {
+                        key: 'Referrer-Policy',
+                        value: 'strict-origin-when-cross-origin'
+                    }
                 ]
             }
         ]

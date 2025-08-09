@@ -3,7 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ThemeProvider";
 import { ArrowRight, ShoppingBag } from "lucide-react";
 

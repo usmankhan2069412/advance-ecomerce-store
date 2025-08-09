@@ -30,8 +30,8 @@ export default function RootLayout({
         <meta name="theme-color" content="#000000" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
+        <ErrorHandlingScript />
       </head>
-      <ErrorHandlingScript />
       <body className={`${inter.className} antialiased bg-white text-gray-900`}>
           <AuthProvider>
             <AuthStateSync />

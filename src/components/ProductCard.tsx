@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import AddToCartButton from "@/components/AddToCartButton";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { toast } from "sonner";
 import LoginPopup from "./LoginPopup";
+import { div } from "@tensorflow/tfjs";
 
 interface ProductCardProps {
   id: string;
@@ -35,6 +36,7 @@ interface ProductCardProps {
   isNew?: boolean;
   isFavorite?: boolean;
   category_name?: string;
+  type: string;
   tags?: string[];
   inventory?: number;
   sizes?: string[];
@@ -98,6 +100,7 @@ const ProductCard = ({
   description,
   sustainabilityScore = 3,
   isNew = false,
+  type,
   isFavorite = false,
   category_name = "",
   tags = [],
@@ -318,6 +321,7 @@ const ProductCard = ({
 
       <Card className="w-80 overflow-hidden transition-all duration-300 hover:shadow-lg bg-white ">
         <div className="relative h-96 w-full overflow-hidden group">
+          
         <Image
           src={images && images.length > 0 ? images[0] : image}
           alt={name}
@@ -343,14 +347,14 @@ const ProductCard = ({
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="mr-2 bg-white/90 hover:bg-white"
+                className="mr-2 bg-white/90 hover:bg-white hover:text-black"
                 onClick={handleQuickViewClick}
               >
                 <Eye className="h-4 w-4 mr-2" />
                 Quick View
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px] bg-white shadow-xl">
+            <DialogContent className="sm:max-w-[800px]  rounded-lg  bg-white shadow-xl">
               <DialogTitle asChild>
                 <VisuallyHidden>{name} - Quick View</VisuallyHidden>
               </DialogTitle>
@@ -471,6 +475,13 @@ const ProductCard = ({
                         </div>
                       </div>
                     )}
+                     {/* Type selection */}
+                     {type && type.length > 0 && (
+                      <div className="mb-4 bg-black">
+                        <h3 className="text-sm font-medium mb-2">Type</h3>
+                        
+                      </div>
+                     )}
 
                     {/* Inventory */}
                     {inventory !== undefined && (

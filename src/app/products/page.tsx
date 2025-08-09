@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ProductGrid } from '@/components/ui/ProductGrid';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';

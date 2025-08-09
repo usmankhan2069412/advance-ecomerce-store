@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { User, ShoppingBag, Menu, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "./ui/Button";
+import { Button } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,7 +69,7 @@ const Header = ({ transparent = false }: HeaderProps) => {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 w-full py-4 px-6 flex items-center justify-between transition-colors duration-300",
+        "fixed top-0 left-0 right-0 z-50 w-full py-3 sm:py-4 px-4 sm:px-6 flex items-center justify-between transition-colors duration-300",
         transparent && !isScrolled
           ? "bg-transparent text-white"
           : isScrolled
@@ -77,12 +77,12 @@ const Header = ({ transparent = false }: HeaderProps) => {
           : "bg-white text-black shadow-sm",
       )}
     >
-      <div className="flex items-center space-x-8">
-        <Link href="/" className="text-2xl font-bold tracking-tighter">
+      <div className="flex items-center space-x-4 sm:space-x-8">
+        <Link href="/" className="text-xl sm:text-2xl font-bold tracking-tighter">
           AETHERIA
         </Link>
 
-        <nav className="hidden md:flex items-center space-x-6">
+        <nav className="hidden lg:flex items-center space-x-6">
           {navItems.map((item) => (
             <Link
               key={item.label}
@@ -95,7 +95,7 @@ const Header = ({ transparent = false }: HeaderProps) => {
         </nav>
       </div>
 
-      <div className="flex items-center space-x-2 icon-container">
+      <div className="flex items-center space-x-1 sm:space-x-2 icon-container">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="relative no-hover">
@@ -179,7 +179,7 @@ const Header = ({ transparent = false }: HeaderProps) => {
               <ShoppingBag className="h-5 w-5 text-white" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 p-4 bg-white">
+          <DropdownMenuContent align="end" className="w-72 sm:w-80 p-3 sm:p-4 bg-white mr-2 sm:mr-0">
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center">
                 <h3 className="font-medium">Your Cart ({cartItemsCount})</h3>
@@ -281,18 +281,19 @@ const Header = ({ transparent = false }: HeaderProps) => {
         </DropdownMenu>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="md" className="no-hover">
+          <DropdownMenuTrigger asChild className="lg:hidden">
+            <Button variant="ghost" size="sm" className="no-hover p-2">
               <Menu className="h-5 w-5 text-white" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-white">
+          <DropdownMenuContent align="end" className="w-56 bg-white mt-2">
             {navItems.map((item) => (
               <DropdownMenuItem key={item.label} asChild>
-                <Link href={item.href}>{item.label}</Link>
+                <Link href={item.href} className="w-full text-left cursor-pointer block px-3 py-2">
+                  {item.label}
+                </Link>
               </DropdownMenuItem>
             ))}
-
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

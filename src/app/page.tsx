@@ -31,10 +31,10 @@ export default function Home() {
         </Suspense>
 
         {/* AI-Powered Search Section */}
-        <section className="py-12 px-4 bg-gray-50">
+        <section className="py-8 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
           <div className="max-w-7xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-6">Discover Your Style</h2>
-            <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">Discover Your Style</h2>
+            <p className="text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
               Our AI understands natural language and your unique preferences to
               find exactly what you're looking for.
             </p>
@@ -64,19 +64,19 @@ export default function Home() {
         </Suspense>
 
         {/* Sustainability Section */}
-        <section className="py-16 px-4 bg-gray-50">
+        <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-3">
+            <div className="text-center mb-8 sm:mb-12">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4">
                 Our Sustainability Commitment
               </h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
+              <p className="text-gray-600 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
                 Every product features transparent sustainability metrics,
                 helping you make informed choices for the planet.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center text-center">
                 <div className="mb-4">
                   <SustainabilityIndicator level="high" size="lg" />

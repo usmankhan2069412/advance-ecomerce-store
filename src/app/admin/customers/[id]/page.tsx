@@ -1,6 +1,6 @@
 import React from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,

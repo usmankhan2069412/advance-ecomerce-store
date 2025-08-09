@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AuthService } from "@/services/auth-service";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, LogIn, UserPlus, Mail, ArrowLeft, RefreshCw, CheckCircle } from "lucide-react";

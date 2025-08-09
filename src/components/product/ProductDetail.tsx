@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useCart } from '@/contexts/CartContext';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -68,6 +68,7 @@ export default function ProductDetail({ product, relatedProducts }: ProductDetai
 
     return (
         <div className="container mx-auto px-4 py-8">
+            <h1>pakistan</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
                 {/* Product Images Gallery */}
                 <div className="space-y-4">
@@ -150,6 +151,7 @@ export default function ProductDetail({ product, relatedProducts }: ProductDetai
 
                     {/* Size Selection */}
                     <div className="mb-6">
+                        
                         <h3 className="font-medium mb-2">Size</h3>
                         <div className="flex gap-2">
                             {product.sizes.map((size) => (
